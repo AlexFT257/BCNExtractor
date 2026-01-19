@@ -97,6 +97,7 @@ class BCNClient:
     def _make_request(
         self, url: str, use_cache: bool = True, cache_key: Optional[str] = None
     ) -> Optional[str]:
+        print("Making request...")
         cache_key = cache_key or url
 
         if use_cache:
