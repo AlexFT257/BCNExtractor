@@ -10,20 +10,8 @@ Este proyecto está pensado como la capa de **Extracción** de un pipeline ELT (
 [![Python 3.9+](https://img.shields.io/badge/python-3.9+-blue.svg)](https://www.python.org/downloads/)
 [![PostgreSQL 15+](https://img.shields.io/badge/postgresql-15+-blue.svg)](https://www.postgresql.org/)
 
-## 📋 Tabla de Contenidos
-
-- [Descripción](#-descripción)
-- [Objetivos](#-objetivos)
-- [Arquitectura](#-arquitectura)
-- [Características](#-características)
-- [Requisitos Previos](#-requisitos-previos)
-- [Instalación](#-instalación)
-- [Uso](#-uso)
-- [Estructura del Proyecto](#-estructura-del-proyecto)
-- [Base de Datos](#-base-de-datos)
-- [Roadmap](#-roadmap)
-- [Contribuir](#-contribuir)
-- [Licencia](#-licencia)
+> [!NOTE]
+> **Nota**: Este proyecto no está afiliado oficialmente con la Biblioteca del Congreso Nacional de Chile. Es una herramienta independiente que utiliza sus servicios web públicos.
 
 ## 🎯 Objetivos
 
@@ -89,22 +77,6 @@ Proporcionar una base de datos estructurada y actualizable de normas legales chi
 2. **XML Parser**: Procesador de documentos XML usando lxml y xmltodict
 3. **Database Service**: Capa de abstracción para PostgreSQL usando SQLAlchemy
 4. **CLI Interface**: Interfaz de línea de comandos para gestionar el sistema
-
-### Flujo de Datos
-
-```
-1. Usuario ejecuta: python main.py download --institucion 1041
-                                    ↓
-2. BCN Client descarga lista de normas de la institución
-                                    ↓
-3. Para cada norma → descarga XML completo
-                                    ↓
-4. XML Parser extrae metadatos y contenido
-                                    ↓
-5. Database Service almacena en PostgreSQL
-                                    ↓
-6. XML original se guarda en volumen Docker (backup)
-```
 
 ## ✨ Características
 
@@ -386,10 +358,4 @@ Este proyecto está licenciado bajo **Creative Commons Attribution-NonCommercial
 - **CompartirIgual**: Si remezclas, transformas o construyes sobre el material, debes distribuir tus contribuciones bajo la misma licencia
 
 Para uso comercial, por favor contacta a [ftb2570@gmail.com](mailto:ftb2570@gmail.com).
----
 
-**Nota**: Este proyecto no está afiliado oficialmente con la Biblioteca del Congreso Nacional de Chile. Es una herramienta independiente que utiliza sus servicios web públicos.
-
-## ⚠️ Disclaimer
-
-Este software se proporciona "tal cual", sin garantías de ningún tipo. El uso de este software es bajo tu propio riesgo. Asegúrate de cumplir con los términos de uso de los servicios web de la BCN.
