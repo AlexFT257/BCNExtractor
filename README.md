@@ -11,7 +11,7 @@ Este proyecto está pensado como la capa de **Extracción** de un pipeline ELT (
 [![PostgreSQL 15+](https://img.shields.io/badge/postgresql-15+-blue.svg)](https://www.postgresql.org/)
 
 > [!NOTE]
-> **Nota**: Este proyecto no está afiliado oficialmente con la Biblioteca del Congreso Nacional de Chile. Es una herramienta independiente que utiliza sus servicios web públicos.
+> Este proyecto no está afiliado oficialmente con la Biblioteca del Congreso Nacional de Chile. Es una herramienta independiente que utiliza sus servicios web públicos.
 
 ## 🎯 Objetivos
 
@@ -47,7 +47,7 @@ Proporcionar una base de datos estructurada y actualizable de normas legales chi
 │              PYTHON APPLICATION                         │
 │  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐  │
 │  │  BCN Client  │  │  XML Parser  │  │   Database   │  │
-│  │   (HTTP)     │→ │   (lxml)     │→ │   Service    │  │
+│  │   (HTTP)     │→ │   (lxml)     │→ │   Services   │  │
 │  └──────────────┘  └──────────────┘  └──────────────┘  │
 └─────────────────────┬───────────────────────────────────┘
                       │
