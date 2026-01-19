@@ -1,0 +1,917 @@
+<xsd:schema
+    targetNamespace="http://www.leychile.cl/esquemas"
+    elementFormDefault="qualified"
+    attributeFormDefault="unqualified"
+    version="1.0"
+>
+<xsd:import
+        namespace="http://valida.aem.gob.cl"
+        schemaLocation="http://www.leychile.cl/esquemas/aem_AdjuntosBinarios-v1-0.xsd"
+    />
+<xsd:import
+        namespace="http://valida.aem.gob.cl"
+        schemaLocation="http://www.leychile.cl/esquemas/aem_ArchivoBinario-v1-0.xsd"
+    />
+<xsd:import
+        namespace="http://valida.aem.gob.cl"
+        schemaLocation="http://www.leychile.cl/esquemas/aem_fecha.xsd"
+    />
+<xsd:element name="Norma">
+<xsd:annotation>
+<xsd:appinfo>LeyChile Biblioteca del Congreso Nacional</xsd:appinfo>
+<xsd:documentation xml:lang="es">
+Esquema para las normas chilenas. Se compone de una secuencia de partes estructurales
+</xsd:documentation>
+</xsd:annotation>
+<xsd:complexType mixed="false">
+<xsd:complexContent mixed="false">
+<xsd:extension base="NormaType" />
+</xsd:complexContent>
+</xsd:complexType>
+</xsd:element>
+<xsd:complexType name="NormaType">
+<xsd:annotation>
+<xsd:documentation>
+Define la estructura de datos de la norma completa, la que se compone de varias partes, las cuales, se distribuyen en un orden secuencial desde arriba hacia abajo: Identificación, Encabezado, Agrupadores/Artículos, Promulgación y Anexos
+</xsd:documentation>
+</xsd:annotation>
+<xsd:sequence>
+<xsd:element name="Identificador">
+<xsd:annotation>
+<xsd:documentation xml:lang="es">
+Elemento que agrupa la información básica para la identificación de la norma.
+</xsd:documentation>
+</xsd:annotation>
+<xsd:complexType mixed="false">
+<xsd:complexContent mixed="false">
+<xsd:extension base="IdentificadorType" />
+</xsd:complexContent>
+</xsd:complexType>
+</xsd:element>
+<xsd:element name="Metadatos" type="MetadatosNormaType">
+<xsd:annotation>
+<xsd:documentation xml:lang="es">
+Elemento que agrupa la información adicional de la norma. Correspondiente a un conjunto de metadatos
+</xsd:documentation>
+</xsd:annotation>
+</xsd:element>
+<xsd:element name="Encabezado">
+<xsd:annotation>
+<xsd:documentation xml:lang="es">
+Elemento que contiene el texto de la parte inicial de la norma no asociada a ningún artículo
+</xsd:documentation>
+</xsd:annotation>
+<xsd:complexType mixed="false">
+<xsd:complexContent mixed="false">
+<xsd:extension base="EncabezadoType" />
+</xsd:complexContent>
+</xsd:complexType>
+</xsd:element>
+<xsd:element name="EstructurasFuncionales" minOccurs="0">
+<xsd:annotation>
+<xsd:documentation xml:lang="es">
+Elemento que contiene el articulado de la norma, la cual puede contener una jerarquía de agrupadores. Una norma puede no contener artículos
+</xsd:documentation>
+</xsd:annotation>
+<xsd:complexType>
+<xsd:sequence>
+<xsd:element
+                            name="EstructuraFuncional"
+                            type="ArticuloType"
+                            maxOccurs="unbounded"
+                        >
+<xsd:annotation>
+<xsd:documentation xml:lang="es">
+Elemento que contiene la estructura de un artículo o agrupador.
+</xsd:documentation>
+</xsd:annotation>
+</xsd:element>
+</xsd:sequence>
+</xsd:complexType>
+</xsd:element>
+<xsd:element name="Promulgacion" type="PromulgacionType" minOccurs="0">
+<xsd:annotation>
+<xsd:documentation xml:lang="es">
+Elemento que contiene el texto de la parte final de la norma, no asociada a ningún artículo. Una norma puede no contener artículos
+</xsd:documentation>
+</xsd:annotation>
+</xsd:element>
+<xsd:element name="Anexos" minOccurs="0">
+<xsd:annotation>
+<xsd:documentation xml:lang="es">
+Elemento que agrupa una secuencia de textos adicionales al articulado, cada uno estructurado en el elemento Anexo Una norma puede no contener anexos
+</xsd:documentation>
+</xsd:annotation>
+<xsd:complexType>
+<xsd:sequence>
+<xsd:element name="Anexo" type="AnexosType" maxOccurs="unbounded">
+<xsd:annotation>
+<xsd:documentation
+                                    xml:lang="es"
+                                >Elemento que contiene la estructura de un anexo</xsd:documentation>
+</xsd:annotation>
+</xsd:element>
+</xsd:sequence>
+</xsd:complexType>
+</xsd:element>
+<xsd:element
+                name="ArchivosBinarios"
+                type="aem:AdjuntosBinariosType"
+                minOccurs="0"
+            >
+<xsd:annotation>
+<xsd:documentation
+                        xml:lang="es"
+                    >Contiene uno o más archivos PDF</xsd:documentation>
+</xsd:annotation>
+</xsd:element>
+<xsd:any namespace="##other" minOccurs="0">
+<xsd:annotation>
+<xsd:documentation xml:lang="es">
+Tiene por objetivo dar extensibilidad a primer nivel del esquema
+</xsd:documentation>
+</xsd:annotation>
+</xsd:any>
+</xsd:sequence>
+<xsd:attribute
+            name="SchemaVersion"
+            type="xsd:NMTOKEN"
+            use="required"
+            fixed="1.0"
+        >
+<xsd:annotation>
+<xsd:documentation xml:lang="es">
+Permite validar que la versión de las instancias sea la misma que la del esquema
+</xsd:documentation>
+</xsd:annotation>
+</xsd:attribute>
+<xsd:attribute name="normaId" use="required">
+<xsd:annotation>
+<xsd:documentation xml:lang="es">
+Identificador único de la norma que usa la BCN en sus distintos servicios
+</xsd:documentation>
+</xsd:annotation>
+<xsd:simpleType>
+<xsd:restriction base="xsd:integer">
+<xsd:minInclusive value="0" />
+</xsd:restriction>
+</xsd:simpleType>
+</xsd:attribute>
+<xsd:attribute name="fechaVersion" type="ParametroFechaType" use="optional">
+<xsd:annotation>
+<xsd:documentation xml:lang="es">
+Fecha de versión de la norma (por defecto los web services entregarán la ultima versión vigente)
+</xsd:documentation>
+</xsd:annotation>
+</xsd:attribute>
+<xsd:attribute name="derogado" type="DerogadoType" use="required">
+<xsd:annotation>
+<xsd:documentation xml:lang="es">
+Si la norma está derogada, tiene el valor 'derogado', en caso contrario 'no derogado'
+</xsd:documentation>
+</xsd:annotation>
+</xsd:attribute>
+<xsd:attribute name="esTratado" type="EsTratadoType" use="required">
+<xsd:annotation>
+<xsd:documentation xml:lang="es">
+Si la norma es un tratado, tiene el valor 'tratado', en caso contrario 'no tardado'
+</xsd:documentation>
+</xsd:annotation>
+</xsd:attribute>
+</xsd:complexType>
+<xsd:complexType name="EncabezadoType">
+<xsd:annotation>
+<xsd:documentation>
+Define la estructura de datos del encabezamiento de la norma cuyo texto corresponde a un preámbulo previo al articulado
+</xsd:documentation>
+</xsd:annotation>
+<xsd:sequence>
+<xsd:element name="Texto" type="CuerpoTextoType">
+<xsd:annotation>
+<xsd:documentation xml:lang="es">
+Grupo que contiene el texto y las imágenes insertas en el mismo. Acorde con parámetro de solicitud del web service, incorpora en el texto notas al pie de página adicionadas por la BCN
+</xsd:documentation>
+</xsd:annotation>
+</xsd:element>
+</xsd:sequence>
+<xsd:attribute name="fechaVersion" type="ParametroFechaType" use="optional">
+<xsd:annotation>
+<xsd:documentation xml:lang="es">
+Fecha de versión de la parte encabezado (por defecto los web services entregarán la ultima versión vigente)
+</xsd:documentation>
+</xsd:annotation>
+</xsd:attribute>
+<xsd:attribute name="derogado" type="DerogadoType" use="required">
+<xsd:annotation>
+<xsd:documentation xml:lang="es">
+Si la norma está derogada, tiene el valor 'derogado', en caso contrario 'no derogado'
+</xsd:documentation>
+</xsd:annotation>
+</xsd:attribute>
+</xsd:complexType>
+<xsd:complexType name="ArticuloType">
+<xsd:annotation>
+<xsd:documentation>
+Define la estructura de datos de un artículo y/o agrupador de la norma. En caso de ser un agrupador contiene EstructurasFuncionales que a su vez está compuesta de al menos una EstructuraFuncional de tipo ArticuloType Esta definición recursiva, permite una representación flexible y simple de la jerarquía de las componentes del articulado
+</xsd:documentation>
+</xsd:annotation>
+<xsd:sequence>
+<xsd:element name="Texto" type="CuerpoTextoType">
+<xsd:annotation>
+<xsd:documentation xml:lang="es">
+Grupo que contiene el texto y las imágenes insertas en el mismo. Acorde con parámetro de solicitud del web service, incorpora en el texto notas al pie de página adicionadas por la BCN
+</xsd:documentation>
+</xsd:annotation>
+</xsd:element>
+<xsd:element name="Metadatos" type="MetadatosArticuloType" minOccurs="0">
+<xsd:annotation>
+<xsd:documentation xml:lang="es">
+Elemento que agrupa la información adicional de un artículo o agrupador.
+</xsd:documentation>
+</xsd:annotation>
+</xsd:element>
+<xsd:element name="EstructurasFuncionales" minOccurs="0">
+<xsd:annotation>
+<xsd:documentation xml:lang="es">
+En caso de que exista un agrupador jerárquico de artículos, como un Capítulo, el nodo agrupador contiene a su vez al elemento EstructurasFuncionales.
+</xsd:documentation>
+</xsd:annotation>
+<xsd:complexType>
+<xsd:sequence>
+<xsd:element
+                            name="EstructuraFuncional"
+                            type="ArticuloType"
+                            maxOccurs="unbounded"
+                        >
+<xsd:annotation>
+<xsd:documentation xml:lang="es">
+Elemento que contiene la estructura de un artículo o agrupador.
+</xsd:documentation>
+</xsd:annotation>
+</xsd:element>
+</xsd:sequence>
+</xsd:complexType>
+</xsd:element>
+</xsd:sequence>
+<xsd:attribute name="idParte" use="required">
+<xsd:annotation>
+<xsd:documentation xml:lang="es">
+Identificador único de la parte que usa la BCN en sus distintos servicios
+</xsd:documentation>
+</xsd:annotation>
+<xsd:simpleType>
+<xsd:restriction base="xsd:integer">
+<xsd:minInclusive value="0" />
+</xsd:restriction>
+</xsd:simpleType>
+</xsd:attribute>
+<xsd:attribute name="fechaVersion" type="ParametroFechaType" use="optional">
+<xsd:annotation>
+<xsd:documentation xml:lang="es">
+Fecha de versión de la parte ESTRUCTURA FUNCIONAL (por defecto los web services entregarán la ultima versión vigente)
+</xsd:documentation>
+</xsd:annotation>
+</xsd:attribute>
+<xsd:attribute name="derogado" type="DerogadoType" use="required">
+<xsd:annotation>
+<xsd:documentation xml:lang="es">
+Si la parte (artículo) está derogada, tiene el valor 'derogado', en caso contrario 'no derogado'
+</xsd:documentation>
+</xsd:annotation>
+</xsd:attribute>
+<xsd:attribute name="tipoParte" type="TipoParteType" use="required">
+<xsd:annotation>
+<xsd:documentation xml:lang="es">
+Descripción de la clase de parte: • Artículo • Doble Articulado • Capítulo • Etc.
+</xsd:documentation>
+</xsd:annotation>
+</xsd:attribute>
+<xsd:attribute name="transitorio" type="TransitorioType" use="required">
+<xsd:annotation>
+<xsd:documentation xml:lang="es">
+Si la parte (artículo) es transitoria, tiene el valor 'transitorio', en caso contrario 'no transitorio'
+</xsd:documentation>
+</xsd:annotation>
+</xsd:attribute>
+</xsd:complexType>
+<xsd:complexType name="PromulgacionType">
+<xsd:annotation>
+<xsd:documentation>
+Define la estructura de datos de la promulgación de la norma. Incluye el texto final de la norma no asociado al articulado.
+</xsd:documentation>
+</xsd:annotation>
+<xsd:sequence>
+<xsd:element name="Texto" type="CuerpoTextoType">
+<xsd:annotation>
+<xsd:documentation xml:lang="es">
+Grupo que contiene el texto y las imágenes insertas en el mismo. Acorde con parámetro de solicitud del web service, incorpora en el texto notas al pie de página adicionadas por la BCN
+</xsd:documentation>
+</xsd:annotation>
+</xsd:element>
+</xsd:sequence>
+<xsd:attribute name="fechaVersion" type="ParametroFechaType" use="optional">
+<xsd:annotation>
+<xsd:documentation xml:lang="es">
+Fecha de versión de la parte Promulgación (por defecto los web services entregarán la ultima versión vigente)
+</xsd:documentation>
+</xsd:annotation>
+</xsd:attribute>
+<xsd:attribute name="derogado" type="DerogadoType" use="required">
+<xsd:annotation>
+<xsd:documentation xml:lang="es">
+Si la norma está derogada, tiene el valor 'derogado', en caso contrario 'no derogado'
+</xsd:documentation>
+</xsd:annotation>
+</xsd:attribute>
+</xsd:complexType>
+<xsd:complexType name="AnexosType">
+<xsd:annotation>
+<xsd:documentation>
+Define la estructura de datos de un anexo de la norma. Corresponde a un documento adjunto a la norma principal.
+</xsd:documentation>
+</xsd:annotation>
+<xsd:sequence>
+<xsd:element name="Metadatos" type="MetadatosAnexoType">
+<xsd:annotation>
+<xsd:documentation xml:lang="es">
+Elemento que agrupa la información adicional de un anexo.
+</xsd:documentation>
+</xsd:annotation>
+</xsd:element>
+<xsd:element name="Texto" type="CuerpoTextoType">
+<xsd:annotation>
+<xsd:documentation xml:lang="es">
+Grupo que contiene el texto y las imágenes insertas en el mismo. Acorde con parámetro de solicitud del web service, incorpora en el texto notas al pie de página adicionadas por la BCN
+</xsd:documentation>
+</xsd:annotation>
+</xsd:element>
+</xsd:sequence>
+<xsd:attribute name="idParte" use="required">
+<xsd:annotation>
+<xsd:documentation xml:lang="es">
+Identificador único del anexo, que usa la BCN en sus distintos servicios
+</xsd:documentation>
+</xsd:annotation>
+<xsd:simpleType>
+<xsd:restriction base="xsd:integer">
+<xsd:minInclusive value="0" />
+</xsd:restriction>
+</xsd:simpleType>
+</xsd:attribute>
+<xsd:attribute name="fechaVersion" type="ParametroFechaType" use="optional">
+<xsd:annotation>
+<xsd:documentation xml:lang="es">
+Fecha del anexo (por defecto los web services entregarán la ultima versión vigente)
+</xsd:documentation>
+</xsd:annotation>
+</xsd:attribute>
+<xsd:attribute name="derogado" type="DerogadoType" use="required">
+<xsd:annotation>
+<xsd:documentation xml:lang="es">
+Si el anexo está derogado, tiene el valor 'derogado', en caso contrario 'no derogado'
+</xsd:documentation>
+</xsd:annotation>
+</xsd:attribute>
+<xsd:attribute name="transitorio" type="TransitorioType" use="required">
+<xsd:annotation>
+<xsd:documentation xml:lang="es">
+Si el anexo es transitorio, tiene el valor 'transitorio', en caso contrario 'no transitorio'
+</xsd:documentation>
+</xsd:annotation>
+</xsd:attribute>
+</xsd:complexType>
+<xsd:complexType name="CuerpoTextoType" mixed="true">
+<xsd:annotation>
+<xsd:documentation>
+Define la estructura de datos usadas para almacenar textos en cada una de las partes estructurales de la norma.Es un elemento con atributo mixed='true' debido a que permite que las imágenes sean ubicadas en el texto en la posición precisa respecto del texto, tal como se publicó en el Diario Oficial Esta opción hace más fácil el procesamiento del despliegue del texto a la aplicación que haga uso de los XML bajo este esquema
+</xsd:documentation>
+</xsd:annotation>
+<xsd:choice minOccurs="0" maxOccurs="unbounded">
+<xsd:element
+                name="ArchivoBinario"
+                type="aem:ArchivoBinarioType"
+                minOccurs="0"
+                maxOccurs="unbounded"
+            >
+<xsd:annotation>
+<xsd:documentation xml:lang="es">
+Elemento que contiene una representación en base64 de una imagen JPG
+</xsd:documentation>
+</xsd:annotation>
+</xsd:element>
+</xsd:choice>
+</xsd:complexType>
+<xsd:complexType name="IdentificadorType">
+<xsd:annotation>
+<xsd:documentation>
+Define la estructura de datos que identifica unívocamente a una norma
+</xsd:documentation>
+</xsd:annotation>
+<xsd:sequence>
+<xsd:element name="TiposNumeros">
+<xsd:annotation>
+<xsd:documentation xml:lang="es">
+Elemento que contiene la identificación de tipo/número de la norma (Ejemplo:Ley 111, o decreto 1, etc.) representado en TipoNumero. Puede existir doble identificación por lo que TipoNumero es repetible.
+</xsd:documentation>
+</xsd:annotation>
+<xsd:complexType>
+<xsd:sequence>
+<xsd:element name="TipoNumero" type="TipoNumeroType" maxOccurs="unbounded">
+<xsd:annotation>
+<xsd:documentation
+                                    xml:lang="es"
+                                >Elemento que forma el par tipo/norma.</xsd:documentation>
+</xsd:annotation>
+</xsd:element>
+</xsd:sequence>
+</xsd:complexType>
+</xsd:element>
+<xsd:element name="Organismos">
+<xsd:annotation>
+<xsd:documentation xml:lang="es">
+Elemento que contiene el o los organismos que dan origen a la norma.
+</xsd:documentation>
+</xsd:annotation>
+<xsd:complexType>
+<xsd:sequence>
+<xsd:element name="Organismo" type="ParametroStringType" maxOccurs="unbounded">
+<xsd:annotation>
+<xsd:documentation
+                                    xml:lang="es"
+                                >Institución que origina la norma.</xsd:documentation>
+</xsd:annotation>
+</xsd:element>
+</xsd:sequence>
+</xsd:complexType>
+</xsd:element>
+</xsd:sequence>
+<xsd:attribute name="fechaPublicacion" type="ParametroFechaType" use="optional">
+<xsd:annotation>
+<xsd:documentation
+                    xml:lang="es"
+                >Fecha de publicación de la norma</xsd:documentation>
+</xsd:annotation>
+</xsd:attribute>
+<xsd:attribute
+            name="fechaPromulgacion"
+            type="ParametroFechaType"
+            use="optional"
+        >
+<xsd:annotation>
+<xsd:documentation
+                    xml:lang="es"
+                >Fecha de promulgación de la norma</xsd:documentation>
+</xsd:annotation>
+</xsd:attribute>
+</xsd:complexType>
+<xsd:complexType name="TipoNumeroType">
+<xsd:annotation>
+<xsd:documentation>
+Define el tipo de datos que agrupa el par tipo norma/numero de la norma, lo que permite que una norma pueda ser identificada por más de un par (Doble identificación)
+</xsd:documentation>
+</xsd:annotation>
+<xsd:sequence>
+<xsd:element name="Tipo" type="TipoNormaType">
+<xsd:annotation>
+<xsd:documentation xml:lang="es">
+Tipo de la norma acorde con la clasificación de las normas que integra el ordenamiento jurídico. Por ejemplo: Leyes, Decretos Leyes, Decretos con Fuerza de Ley, etc.
+</xsd:documentation>
+</xsd:annotation>
+</xsd:element>
+<xsd:element name="Numero" type="ParametroStringType">
+<xsd:annotation>
+<xsd:documentation xml:lang="es">
+Número de la Ley o numeración correlativa asignada por el organismo que genera la norma.
+</xsd:documentation>
+</xsd:annotation>
+</xsd:element>
+</xsd:sequence>
+</xsd:complexType>
+<xsd:complexType name="MetadatosNormaType">
+<xsd:annotation>
+<xsd:documentation>
+Define los Metadatos asociados a la norma como un todo
+</xsd:documentation>
+</xsd:annotation>
+<xsd:sequence>
+<xsd:element name="TituloNorma">
+<xsd:annotation>
+<xsd:documentation xml:lang="es">Nombre de la norma.</xsd:documentation>
+</xsd:annotation>
+<xsd:simpleType>
+<xsd:restriction base="xsd:string">
+<xsd:minLength value="1" />
+<xsd:maxLength value="2000" />
+</xsd:restriction>
+</xsd:simpleType>
+</xsd:element>
+<xsd:element name="Materias" minOccurs="0">
+<xsd:annotation>
+<xsd:documentation xml:lang="es">
+Elemento que contiene uno a más descriptores normalizados de materia a nivel de norma
+</xsd:documentation>
+</xsd:annotation>
+<xsd:complexType>
+<xsd:sequence>
+<xsd:element name="Materia" type="ParametroStringType" maxOccurs="unbounded">
+<xsd:annotation>
+<xsd:documentation xml:lang="es">
+Descripción normalizada de una materia asociada a la norma.
+</xsd:documentation>
+</xsd:annotation>
+</xsd:element>
+</xsd:sequence>
+</xsd:complexType>
+</xsd:element>
+<xsd:element name="NombresUsoComun" minOccurs="0">
+<xsd:annotation>
+<xsd:documentation xml:lang="es">
+Elemento que contiene uno a más nombres con el que se conoce la norma.
+</xsd:documentation>
+</xsd:annotation>
+<xsd:complexType>
+<xsd:sequence>
+<xsd:element
+                            name="NombreUsoComun"
+                            type="ParametroStringType"
+                            maxOccurs="unbounded"
+                        >
+<xsd:annotation>
+<xsd:documentation
+                                    xml:lang="es"
+                                >Descripción de uso común de la norma.</xsd:documentation>
+</xsd:annotation>
+</xsd:element>
+</xsd:sequence>
+</xsd:complexType>
+</xsd:element>
+<xsd:element name="PaisesTratados" minOccurs="0">
+<xsd:annotation>
+<xsd:documentation xml:lang="es">
+Elemento que contiene uno a más nombres de los países con que se realiza el tratado
+</xsd:documentation>
+</xsd:annotation>
+<xsd:complexType>
+<xsd:sequence>
+<xsd:element
+                            name="PaisTratado"
+                            type="ParametroStringType"
+                            maxOccurs="unbounded"
+                        >
+<xsd:annotation>
+<xsd:documentation
+                                    xml:lang="es"
+                                >Nombre de un país con que se realiza un tratado. </xsd:documentation>
+</xsd:annotation>
+</xsd:element>
+</xsd:sequence>
+</xsd:complexType>
+</xsd:element>
+<xsd:element name="TipoTratado" type="TipoTratadoType" minOccurs="0">
+<xsd:annotation>
+<xsd:documentation xml:lang="es">
+Indica si el tratado es : * Bilateral o * Multilateral
+</xsd:documentation>
+</xsd:annotation>
+</xsd:element>
+<xsd:element name="FechaTratado" type="aem:FechaValidaType" minOccurs="0">
+<xsd:annotation>
+<xsd:documentation xml:lang="es">
+Si la norma es un tratado (atributo esTratado="tratado") este elemento toma valor correspondiente a la fecha de publicación o “entrada en vigencia del tratado”
+</xsd:documentation>
+</xsd:annotation>
+</xsd:element>
+<xsd:element name="FechaDerogacion" type="aem:FechaValidaType" minOccurs="0">
+<xsd:annotation>
+<xsd:documentation xml:lang="es">
+En caso que la norma esté derogada (atributo derogado='derogado'), indica fecha de derogación. En caso contrario el elemento se omite
+</xsd:documentation>
+</xsd:annotation>
+</xsd:element>
+<xsd:element
+                name="IdentificacionFuente"
+                type="IdentificacionFuenteType"
+                minOccurs="0"
+            >
+<xsd:annotation>
+<xsd:documentation xml:lang="es">
+Fuente en que se publicó la norma original. Ejemplo: Diario Oficial, Araucano…
+</xsd:documentation>
+</xsd:annotation>
+</xsd:element>
+<xsd:element name="NumeroFuente" type="ParametroStringCortoType" minOccurs="0">
+<xsd:annotation>
+<xsd:documentation xml:lang="es">
+Señala el número de edición del Diario Oficial o de la fuente que originó la norma.
+</xsd:documentation>
+</xsd:annotation>
+</xsd:element>
+<xsd:any namespace="##other" minOccurs="0">
+<xsd:annotation>
+<xsd:documentation xml:lang="es">
+Tiene por objetivo dar extensibilidad a los metadatos de la norma
+</xsd:documentation>
+</xsd:annotation>
+</xsd:any>
+</xsd:sequence>
+</xsd:complexType>
+<xsd:complexType name="MetadatosArticuloType">
+<xsd:annotation>
+<xsd:documentation>
+Define los Metadatos asociados a un artículo o agrupador puntual
+</xsd:documentation>
+</xsd:annotation>
+<xsd:sequence>
+<xsd:element name="NombreParte" type="AlternativaIdentificacionParteType">
+<xsd:annotation>
+<xsd:documentation xml:lang="es">
+Descripción de la parte. : • Número del artículo, modificadores BIS, etc. En caso de que la parte sea agrupador, el elemento no va
+</xsd:documentation>
+</xsd:annotation>
+</xsd:element>
+<xsd:element name="TituloParte" type="AlternativaIdentificacionParteType">
+<xsd:annotation>
+<xsd:documentation xml:lang="es">
+Nombre de la parte agrupadora. Es opcional, se usa solo cuando es agrupador como Capítulo, Título, etc.
+</xsd:documentation>
+</xsd:annotation>
+</xsd:element>
+<xsd:element name="Materias" minOccurs="0">
+<xsd:annotation>
+<xsd:documentation xml:lang="es">
+Elemento que contiene uno a más descriptores normalizados de materia asociados a un artículo o agrupador
+</xsd:documentation>
+</xsd:annotation>
+<xsd:complexType>
+<xsd:sequence>
+<xsd:element name="Materia" type="ParametroStringType" maxOccurs="unbounded">
+<xsd:annotation>
+<xsd:documentation xml:lang="es">
+Descripción normalizada de una materia asociada a un artículo o un agrupador.
+</xsd:documentation>
+</xsd:annotation>
+</xsd:element>
+</xsd:sequence>
+</xsd:complexType>
+</xsd:element>
+<xsd:element name="FechaDerogacion" type="aem:FechaValidaType" minOccurs="0">
+<xsd:annotation>
+<xsd:documentation xml:lang="es">
+En caso en que el artículo esté derogado (atributo derogado='derogado'), indica fecha de derogación. En caso contrario el elemento se omite
+</xsd:documentation>
+</xsd:annotation>
+</xsd:element>
+<xsd:any namespace="##other" minOccurs="0">
+<xsd:annotation>
+<xsd:documentation xml:lang="es">
+Tiene por objetivo dar extensibilidad a los metadatos de una Estructura funcional
+</xsd:documentation>
+</xsd:annotation>
+</xsd:any>
+</xsd:sequence>
+</xsd:complexType>
+<xsd:complexType name="MetadatosAnexoType">
+<xsd:annotation>
+<xsd:documentation
+            >Define los Metadatos asociados a un anexo puntual</xsd:documentation>
+</xsd:annotation>
+<xsd:sequence>
+<xsd:element name="Titulo">
+<xsd:annotation>
+<xsd:documentation xml:lang="es">Título del Anexo</xsd:documentation>
+</xsd:annotation>
+<xsd:simpleType>
+<xsd:restriction base="xsd:string">
+<xsd:minLength value="1" />
+<xsd:maxLength value="2000" />
+</xsd:restriction>
+</xsd:simpleType>
+</xsd:element>
+<xsd:element name="Materias" minOccurs="0">
+<xsd:annotation>
+<xsd:documentation xml:lang="es">
+Elemento que contiene uno a más descriptores normalizados de materia asociados a un artículo o agrupador
+</xsd:documentation>
+</xsd:annotation>
+<xsd:complexType>
+<xsd:sequence>
+<xsd:element name="Materia" type="ParametroStringType" maxOccurs="unbounded">
+<xsd:annotation>
+<xsd:documentation xml:lang="es">
+Descripción normalizada de una materia asociada a un Anexo.
+</xsd:documentation>
+</xsd:annotation>
+</xsd:element>
+</xsd:sequence>
+</xsd:complexType>
+</xsd:element>
+<xsd:element name="FechaDerogacion" type="aem:FechaValidaType" minOccurs="0">
+<xsd:annotation>
+<xsd:documentation xml:lang="es">
+En caso en que el anexo esté derogado (atributo derogado='derogado'), indica fecha de derogación. En caso contrario el elemento se omite
+</xsd:documentation>
+</xsd:annotation>
+</xsd:element>
+<xsd:any namespace="##other" minOccurs="0">
+<xsd:annotation>
+<xsd:documentation xml:lang="es">
+Tiene por objetivo dar extensibilidad a los metadatos del Anexo
+</xsd:documentation>
+</xsd:annotation>
+</xsd:any>
+</xsd:sequence>
+</xsd:complexType>
+<xsd:complexType name="AlternativaIdentificacionParteType">
+<xsd:annotation>
+<xsd:documentation xml:lang="es">
+Tipo que permite manejar la existencia de los componentes alternativos NombreParte/TituloParte
+</xsd:documentation>
+</xsd:annotation>
+<xsd:simpleContent>
+<xsd:extension base="ParametroStringType">
+<xsd:attribute name="presente" type="SiNoType" use="required">
+<xsd:annotation>
+<xsd:documentation xml:lang="lang">
+Si el elemento tiene valor, este atributo toma el valor "si", en caso contrario "no"
+</xsd:documentation>
+</xsd:annotation>
+</xsd:attribute>
+</xsd:extension>
+</xsd:simpleContent>
+</xsd:complexType>
+<xsd:simpleType name="SiNoType">
+<xsd:annotation>
+<xsd:documentation xml:lang="es">
+La ocurrencia de cada uno de los elementos de tipo AlternativaIdentificacionParte, se indica asignando el valor de “si” o “no” al atributo “presente”.
+</xsd:documentation>
+</xsd:annotation>
+<xsd:restriction base="xsd:string">
+<xsd:enumeration value="si" />
+<xsd:enumeration value="no" />
+</xsd:restriction>
+</xsd:simpleType>
+<xsd:simpleType name="TipoNormaType">
+<xsd:annotation>
+<xsd:documentation
+            >Restringe la lista de tipos de normas posibles</xsd:documentation>
+</xsd:annotation>
+<xsd:restriction base="xsd:string">
+<xsd:enumeration value="Otro" />
+<xsd:enumeration value="Ley" />
+<xsd:enumeration value="Código" />
+<xsd:enumeration value="Convenio" />
+<xsd:enumeration value="Decreto con Fuerza de Ley" />
+<xsd:enumeration value="Dictamen" />
+<xsd:enumeration value="Decreto Ley" />
+<xsd:enumeration value="Instrucción" />
+<xsd:enumeration value="Norma Antigua S/N" />
+<xsd:enumeration value="Norma Antigua" />
+<xsd:enumeration value="Notificación" />
+<xsd:enumeration value="Oficio" />
+<xsd:enumeration value="Decreto" />
+<xsd:enumeration value="Orden" />
+<xsd:enumeration value="Ordenanza" />
+<xsd:enumeration value="Sentencia" />
+<xsd:enumeration value="Sesión" />
+<xsd:enumeration value="Reunión extraordinaria" />
+<xsd:enumeration value="Reunión ordinaria" />
+<xsd:enumeration value="RRA" />
+<xsd:enumeration value="Sin número" />
+<xsd:enumeration value="Tratado Antiguo" />
+<xsd:enumeration value="Tratado" />
+<xsd:enumeration value="Resolución" />
+<xsd:enumeration value="Constitución de la República" />
+<xsd:enumeration value="Auto Acordado" />
+<xsd:enumeration value="Acuerdo" />
+<xsd:enumeration value="Alcance" />
+<xsd:enumeration value="Aviso" />
+<xsd:enumeration value="Certificado" />
+<xsd:enumeration value="Circular" />
+<xsd:enumeration value="Rectificación" />
+<xsd:enumeration value="Senado Consulto" />
+<xsd:enumeration value="Telegrama Circular" />
+<xsd:enumeration value="Carta Circular" />
+<xsd:enumeration value="Lei" />
+<xsd:enumeration value="Bando" />
+</xsd:restriction>
+</xsd:simpleType>
+<xsd:simpleType name="IdentificacionFuenteType">
+<xsd:annotation>
+<xsd:documentation>Restringe la lista de fuentes posibles</xsd:documentation>
+</xsd:annotation>
+<xsd:restriction base="xsd:string">
+<xsd:enumeration value="Diario Oficial" />
+<xsd:enumeration value="Otro" />
+<xsd:enumeration value="Boletín de Leyes y Decretos de Gobierno" />
+<xsd:enumeration value="Codigos" />
+<xsd:enumeration value="Constituciones" />
+<xsd:enumeration value="Diario El Araucano" />
+<xsd:enumeration value="Diario El Ferrocarril" />
+<xsd:enumeration value="El Monitor Araucano" />
+<xsd:enumeration value="Junta de Iquique" />
+<xsd:enumeration value="Leyes Promulgadas en Chile" />
+<xsd:enumeration value="Recopilación de Decretos Leyes de la Contraloría" />
+<xsd:enumeration
+                value="Recopilación de Decretos con Fuerza de Ley de la Contraloría"
+            />
+<xsd:enumeration value="Recopilación de Leyes del Consejo de Estado" />
+<xsd:enumeration
+                value="Recopilación de Leyes y Reglamentos de la Contraloría"
+            />
+<xsd:enumeration value="Recopilación de Reglamentos de la Contraloría" />
+<xsd:enumeration value="Recopilación de leyes de la Contraloría" />
+<xsd:enumeration value="Recopilación de instrucciones SBIF" />
+</xsd:restriction>
+</xsd:simpleType>
+<xsd:simpleType name="DerogadoType">
+<xsd:annotation>
+<xsd:documentation>Restringe valores para el estado derogado</xsd:documentation>
+</xsd:annotation>
+<xsd:restriction base="xsd:string">
+<xsd:enumeration value="derogado" />
+<xsd:enumeration value="no derogado" />
+</xsd:restriction>
+</xsd:simpleType>
+<xsd:simpleType name="EsTratadoType">
+<xsd:annotation>
+<xsd:documentation>
+Restringe valores para indicar si norma es un tratado
+</xsd:documentation>
+</xsd:annotation>
+<xsd:restriction base="xsd:string">
+<xsd:enumeration value="tratado" />
+<xsd:enumeration value="no tratado" />
+</xsd:restriction>
+</xsd:simpleType>
+<xsd:simpleType name="TipoTratadoType">
+<xsd:annotation>
+<xsd:documentation>Restringe valores del tipo tratado</xsd:documentation>
+</xsd:annotation>
+<xsd:restriction base="xsd:string">
+<xsd:enumeration value="bilateral" />
+<xsd:enumeration value="multilateral" />
+</xsd:restriction>
+</xsd:simpleType>
+<xsd:simpleType name="TransitorioType">
+<xsd:annotation>
+<xsd:documentation>
+Restringe valores de los formatos que puede tomar el atributo transitorio
+</xsd:documentation>
+</xsd:annotation>
+<xsd:restriction base="xsd:string">
+<xsd:enumeration value="transitorio" />
+<xsd:enumeration value="no transitorio" />
+</xsd:restriction>
+</xsd:simpleType>
+<xsd:simpleType name="TipoParteType">
+<xsd:annotation>
+<xsd:documentation>Restringe valores de los tipos parte</xsd:documentation>
+</xsd:annotation>
+<xsd:restriction base="xsd:string">
+<xsd:enumeration value="Libro" />
+<xsd:enumeration value="Título" />
+<xsd:enumeration value="Parágrafo" />
+<xsd:enumeration value="Enumeración" />
+<xsd:enumeration value="Párrafo" />
+<xsd:enumeration value="Capítulo" />
+<xsd:enumeration value="Artículo" />
+<xsd:enumeration value="Disposición Transitoria" />
+<xsd:enumeration value="Disposición" />
+<xsd:enumeration value="Artículo Transitorio" />
+<xsd:enumeration value="Doble Articulado" />
+<xsd:enumeration value="Disposiciones Preliminares" />
+<xsd:enumeration value="Otros" />
+</xsd:restriction>
+</xsd:simpleType>
+<xsd:simpleType name="ParametroStringCortoType">
+<xsd:annotation>
+<xsd:documentation
+                xml:lang="es"
+            >Tipo usado para definir strigs cortos</xsd:documentation>
+</xsd:annotation>
+<xsd:restriction base="xsd:string">
+<xsd:maxLength value="100" />
+</xsd:restriction>
+</xsd:simpleType>
+<xsd:simpleType name="ParametroStringType">
+<xsd:annotation>
+<xsd:documentation xml:lang="es">
+Tipo usado para definir la mayoría de los elementos y atributos simples de tipo string
+</xsd:documentation>
+</xsd:annotation>
+<xsd:restriction base="xsd:string">
+<xsd:minLength value="1" />
+<xsd:maxLength value="200" />
+</xsd:restriction>
+</xsd:simpleType>
+<xsd:simpleType name="ParametroFechaType">
+<xsd:annotation>
+<xsd:documentation xml:lang="es">
+Tipo usado para definir la mayoría de los elementos y atributos simples de tipo fecha
+</xsd:documentation>
+</xsd:annotation>
+<xsd:restriction base="xsd:date">
+<xsd:minInclusive value="1800-01-01" />
+</xsd:restriction>
+</xsd:simpleType>
+</xsd:schema>
