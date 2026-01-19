@@ -45,29 +45,29 @@ Proporcionar una base de datos estructurada y actualizable de normas legales chi
                       ▼
 ┌─────────────────────────────────────────────────────────┐
 │              PYTHON APPLICATION                         │
-│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐  │
-│  │  BCN Client  │  │  XML Parser  │  │   Database   │  │
-│  │   (HTTP)     │→ │   (lxml)     │→ │   Services   │  │
-│  └──────────────┘  └──────────────┘  └──────────────┘  │
+│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐   │
+│  │  BCN Client  │  │  XML Parser  │  │   Database   │   │
+│  │   (HTTP)     │→ │   (lxml)     │→ │   Services   │   │
+│  └──────────────┘  └──────────────┘  └──────────────┘   │
 └─────────────────────┬───────────────────────────────────┘
                       │
                       ▼
 ┌─────────────────────────────────────────────────────────┐
 │              POSTGRESQL DATABASE                        │
-│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐  │
-│  │   Normas     │  │Instituciones │  │  Relaciones  │  │
-│  │              │  │              │  │              │  │
-│  │  (+ FTS)     │  │              │  │              │  │
-│  └──────────────┘  └──────────────┘  └──────────────┘  │
+│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐   │
+│  │   Normas     │  │Instituciones │  │  Relaciones  │   │
+│  │              │  │              │  │              │   │
+│  │  (+ FTS)     │  │              │  │              │   │
+│  └──────────────┘  └──────────────┘  └──────────────┘   │
 └─────────────────────────────────────────────────────────┘
                       │
                       ▼
 ┌─────────────────────────────────────────────────────────┐
 │              DOCKER VOLUMES                             │
-│  ┌──────────────┐              ┌──────────────┐        │
-│  │  PostgreSQL  │              │   XML Files  │        │
-│  │     Data     │              │   (backup)   │        │
-│  └──────────────┘              └──────────────┘        │
+│  ┌──────────────┐              ┌──────────────┐         │
+│  │  PostgreSQL  │              │   XML Files  │         │
+│  │     Data     │              │   (backup)   │         │
+│  └──────────────┘              └──────────────┘         │
 └─────────────────────────────────────────────────────────┘
 ```
 
@@ -354,8 +354,8 @@ Este proyecto está licenciado bajo **Creative Commons Attribution-NonCommercial
 ### Bajo las siguientes condiciones:
 
 - **Atribución**: Debes dar crédito apropiado, proporcionar un enlace a la licencia e indicar si se realizaron cambios
-- **NoComercial**: No puedes usar el material con fines comerciales
-- **CompartirIgual**: Si remezclas, transformas o construyes sobre el material, debes distribuir tus contribuciones bajo la misma licencia
+- **No Comercial**: No puedes usar el material con fines comerciales
+- **Compartir Igual**: Si remezclas, transformas o construyes sobre el material, debes distribuir tus contribuciones bajo la misma licencia
 
 Para uso comercial, por favor contacta a [ftb2570@gmail.com](mailto:ftb2570@gmail.com).
 
