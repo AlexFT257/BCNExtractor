@@ -33,19 +33,19 @@ class TiposNormasManager():
         
         cursor.execute(f"""
             CREATE TABLE IF NOT EXISTS {self.TABLE_NAME} (
-                id INTEGER PRIMARY KEY,
+                id SERIAL PRIMARY KEY,
                 nombre TEXT NOT NULL UNIQUE,
                 abreviatura TEXT,
                 fecha_creacion TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 fecha_actualizacion TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-            )
+            );
             
             CREATE INDEX IF NOT EXISTS idx_tipos_normas_nombre ON {self.TABLE_NAME} (nombre);
             CREATE INDEX IF NOT EXISTS idx_tipos_normas_abreviatura ON {self.TABLE_NAME} (abreviatura);
         """)
         self.conn.commit()
         cursor.close()
-        print(f"Tabla {self.TABLE_NAME} creada/validada correctamente")
+        print(f"Tabla {self.TABLE_NAME} creada/validada")
         
     def add_or_update(
             self, 
