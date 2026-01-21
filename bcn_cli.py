@@ -304,7 +304,7 @@ def stats_command(args):
     """Muestra estadísticas del sistema"""
     norms_mgr = NormsManager()
     tipos_mgr = TiposNormasManager(db_connection=norms_mgr.conn)
-    inst_loader = InstitutionLoader(db_connection=norms_mgr.conn)
+    inst_manager = InstitutionManager(db_connection=norms_mgr.conn)
     logger = DBLogger(db_connection=norms_mgr.conn)
     
     try:
@@ -320,9 +320,9 @@ def stats_command(args):
         print(f"\tDerogadas:  {norms_stats['derogadas']}")
         
         # Instituciones
-        inst_stats = inst_loader.get_stats()
-        print(f"\nInstituciones:")
-        print(f"\tTotal:      {inst_stats['total']}")
+        # inst_stats = inst_manager.get_stats()
+        # print(f"\nInstituciones:")
+        # print(f"\tTotal:      {inst_stats['total']}")
         
         # Tipos
         tipos_stats = tipos_mgr.get_all()
@@ -330,7 +330,7 @@ def stats_command(args):
         print(f"\tTotal:      {len(tipos_stats)}")
         
         # Logs
-        log_stats = logger.get_stats(dias=7)
+        log_stats = logger.get_stats(days=7)
         print(f"\nOperaciones (últimos 7 días):")
         for estado, count in log_stats.items():
             print(f"\t{estado:12s}: {count}")

@@ -13,7 +13,7 @@ Este proyecto está pensado como la capa de **Extracción** de un pipeline ELT (
 > [!NOTE]
 > Este proyecto no está afiliado oficialmente con la Biblioteca del Congreso Nacional de Chile. Es una herramienta independiente que utiliza sus servicios web públicos.
 
-## 🎯 Objetivos
+## Objetivos
 
 ### Objetivo Principal
 Proporcionar una base de datos estructurada y actualizable de normas legales chilenas organizadas por instituciones, facilitando el acceso programático a la legislación nacional.
@@ -33,7 +33,7 @@ Proporcionar una base de datos estructurada y actualizable de normas legales chi
 - **Transparencia**: Ciudadanos y organizaciones que buscan acceder a información legal estructurada
 - **Data Science**: Científicos de datos que quieren aplicar NLP/ML sobre corpus legales
 
-## 🏗️ Arquitectura
+## Arquitectura
 
 ### Stack Tecnológico
 
@@ -78,7 +78,7 @@ Proporcionar una base de datos estructurada y actualizable de normas legales chi
 3. **Database Service**: Capa de abstracción para PostgreSQL usando SQLAlchemy
 4. **CLI Interface**: Interfaz de línea de comandos para gestionar el sistema
 
-## ✨ Características
+## Características
 
 ### Versión 1.0 (MVP)
 
@@ -101,7 +101,7 @@ Proporcionar una base de datos estructurada y actualizable de normas legales chi
 - 🔲 Soporte para versiones históricas de normas
 - 🔲 Análisis de relaciones entre normas (modificaciones, derogaciones)
 
-## 📋 Requisitos Previos
+## Requisitos Previos
 
 - **Docker Desktop** (o Docker Engine + Docker Compose)
   - Windows: [Descargar Docker Desktop](https://docs.docker.com/desktop/install/windows-install/)
@@ -118,13 +118,13 @@ Proporcionar una base de datos estructurada y actualizable de normas legales chi
   git --version  # Verificar instalación
   ```
 
-## 🚀 Instalación
+## Instalación
 
 ### 1. Clonar el Repositorio
 
 ```bash
-git clone https://github.com/tu-usuario/extractor-normas-bcn.git
-cd extractor-normas-bcn
+git clone https://github.com/AlexFT257/BCNExtractor.git
+cd BCNExtractor
 ```
 
 ### 2. Configurar Variables de Entorno
@@ -169,38 +169,108 @@ source venv/bin/activate
 pip install -r requirements.txt
 ```
 
-## 💻 Uso
+## Uso
 
-### Comandos Básicos
+Esta sección detalla cómo interactuar con el sistema a través de las diferentes interfaces de línea de comandos (CLI).
 
-#### 1. Instituciones
+### 1. Comandos del CLI Principal (`bcn_cli.py`)
 
+Estos comandos se utilizan para la extracción, sincronización, búsqueda y gestión general del sistema de normas.
+
+#### Inicialización de la Base de Datos
 ```bash
-# Cargar instituciones desde CSV (actualiza existentes)
-python institution_cli.py load data/instituciones.csv
-
-# Reemplazar todas las instituciones
-python institution_cli.py load data/instituciones.csv --mode replace
-
-# Solo agregar nuevas (ignora duplicados)
-python institution_cli.py load data/instituciones.csv --mode append
-
-# Listar todas las instituciones
-python institution_cli.py list
-
-# Buscar instituciones
-python institution_cli.py list --search ministerio
-
-# Ver detalles de una institución
-python institution_cli.py get 1041
+# Inicializa el esquema de la base de datos (recomendado antes de cualquier otra operación)
+python bcn_cli.py init
 ```
 
-#### 2. Normas por institución
+#### Listar Normas
+```bash
+# Lista normas de una institución desde la BCN
+python bcn_cli.py list 17 --limit 10
+
+# Lista normas con detalles completos
+python bcn_cli.py list 17 -v
+
+# Guarda la lista de normas en un archivo JSON
+python bcn_cli.py list 17 -o normas_inst_17.json
+```
+
+#### Descargar Norma Específica
+```bash
+# Descarga los metadatos de una norma y los muestra en consola (vista previa)
+python bcn_cli.py get 206396
+
+# Descarga el contenido completo de una norma y lo guarda como Markdown
+python bcn_cli.py get 206396 --output_md ./output/norma_206396.md
+
+# Descarga el contenido completo de una norma y lo guarda como XML
+python bcn_cli.py get 206396 --output_xml ./output/norma_206396.xml
+
+# Descarga la norma completa (incluyendo contenido)
+python bcn_cli.py get 206396 -f --output_md ./output/norma_206396_full.md
+```
+
+#### Sincronizar Normas con la Base de Datos
+```bash
+# Sincroniza normas de una institución en la base de datos
+python bcn_cli.py sync 17 --limit 5
+
+# Fuerza la actualización de normas existentes
+python bcn_cli.py sync 17 --force
+```
+
+#### Buscar Normas Almacenadas
+```bash
+# Busca normas en la base de datos local por una palabra clave
+python bcn_cli.py search "medio ambiente"
+
+# Limita el número de resultados de la búsqueda
+python bcn_cli.py search "derecho laboral" --limit 15
+```
+
+#### Ver Estadísticas del Sistema
+```bash
+# Muestra estadísticas generales del sistema
+python bcn_cli.py stats
+
+# Muestra estadísticas incluyendo los errores recientes
+python bcn_cli.py stats --errors
+```
+
+#### Gestionar Caché
+```bash
+# Consulta información sobre el caché local
+python bcn_cli.py cache stats
+
+# Limpia el caché local de forma interactiva
+python bcn_cli.py cache clear
+
+# Limpia el caché local sin confirmación
+python bcn_cli.py cache clear --force
+```
+
+### 2. Comandos del CLI de Instituciones (`institution_cli.py`)
+
+Estos comandos permiten la gestión de las instituciones asociadas a las normas.
 
 ```bash
-# Listar normas de una institución
-python bcn_cli.py list 1041 --limit 10
+# Cargar instituciones desde un archivo CSV (actualiza existentes si los IDs coinciden)
+python institution_cli.py load data/instituciones.csv
 
+# Reemplazar todas las instituciones existentes con las del CSV
+python institution_cli.py load data/instituciones.csv --mode replace
+
+# Solo agregar nuevas instituciones del CSV, ignorando duplicados
+python institution_cli.py load data/instituciones.csv --mode append
+
+# Listar todas las instituciones almacenadas
+python institution_cli.py list
+
+# Buscar instituciones por una palabra clave en su nombre
+python institution_cli.py list --search ministerio
+
+# Ver detalles de una institución específica usando su ID
+python institution_cli.py get 1041
 ```
 
 ## 📁 Estructura del Proyecto
@@ -209,7 +279,6 @@ python bcn_cli.py list 1041 --limit 10
 extractor-normas-bcn/
 │
 ├── docker-compose.yml          # Configuración Docker
-├── Dockerfile                  # Imagen Python
 ├── requirements.txt            # Dependencias Python
 ├── .env.example                # Plantilla variables de entorno
 ├── README.md                   # Este archivo
@@ -217,12 +286,15 @@ extractor-normas-bcn/
 ├── bcn_client.py               # Cliente para la API de la BCN
 ├── bcn_cli.py                  # CLI para manejar la aplicación
 │
+├── db_logger.py                  # Logger de descargas para la BD
+│
 ├── institution_cli.py          # CLI para manejar instituciones
 ├── institution_loader.py       # Util para cargar instituciones desde un archivo CSV
 ├── institution_manager.py      # Gestor de instituciones en la base de datos
 │
+├── norm_manager.py             # Gestor de normas en la base de datos
+├── norm_parser.py              # Parser de normas (xml y md)
 ├── norms_types_manager.py      # Gestor de tipos de normas en la base de datos
-│
 │
 ├── data/
 │   ├── xml/                        # XMLs y schemas descargados (backup)
@@ -230,17 +302,17 @@ extractor-normas-bcn/
 │   ├── cache/                      # Cache de datos
 │   ├── sample/                     # Ejemplos de respuesta del web service de la BCN
 │   ├── extractor_instituciones.py  # Util para extraer instituciones del html
-│   ├── instituciones.html          # Instituciones de la BCN (simplificado)
 │   └── instituciones.csv           # Instituciones de la BCN (backup)
+│   └── bcn_schema.xml              # Schema del xml de la BCN
 │
-├── tests/
+├── tests/                          # [WIP]
 │   ├── test_bcn_client.py
 │   ├── test_parser.py
 │   └── test_database.py
 │
 └── docs/
     ├── API_BCN.md              # Documentación servicios BCN
-    └── DATABASE_SCHEMA.md      # Esquema de base de datos
+    └── DATABASE_SCHEMA.md      # Esquema de base de datos [WIP]
 ```
 
 ## 🗄️ Base de Datos
@@ -320,15 +392,14 @@ Ver [DATABASE_SCHEMA.md](docs/DATABASE_SCHEMA.md) para detalles completos.
 - [x] Docker setup
 
 ### Fase 2: Optimización (Versión 1.1)
-- [ ] Sistema de caché para reducir requests
-- [ ] Rate limiting configurable
-- [ ] Reintentos automáticos en fallos
+- [x] Sistema de caché para reducir requests
+- [x] Rate limiting configurable
+- [x] Reintentos automáticos en fallos
 - [ ] Métricas de performance
 
 ### Fase 3: API (Versión 2.0)
 - [ ] API REST con FastAPI
 - [ ] Endpoints de búsqueda avanzada
-- [ ] Autenticación y rate limiting
 - [ ] Documentación OpenAPI
 
 ### Fase 4: Frontend (Versión 3.0)
