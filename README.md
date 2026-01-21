@@ -286,7 +286,7 @@ extractor-normas-bcn/
 ├── bcn_client.py               # Cliente para la API de la BCN
 ├── bcn_cli.py                  # CLI para manejar la aplicación
 │
-├── db_logger.py                  # Logger de descargas para la BD
+├── db_logger.py                # Logger de descargas para la BD
 │
 ├── institution_cli.py          # CLI para manejar instituciones
 ├── institution_loader.py       # Util para cargar instituciones desde un archivo CSV
