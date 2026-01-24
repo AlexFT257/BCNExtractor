@@ -276,7 +276,7 @@ python institution_cli.py get 1041
 ## 📁 Estructura del Proyecto
 
 ```
-extractor-normas-bcn/
+BCNExtractor/
 │
 ├── docker-compose.yml          # Configuración Docker
 ├── requirements.txt            # Dependencias Python
@@ -285,16 +285,19 @@ extractor-normas-bcn/
 │
 ├── bcn_client.py               # Cliente para la API de la BCN
 ├── bcn_cli.py                  # CLI para manejar la aplicación
-│
-├── db_logger.py                # Logger de descargas para la BD
-│
 ├── institution_cli.py          # CLI para manejar instituciones
-├── institution_loader.py       # Util para cargar instituciones desde un archivo CSV
-├── institution_manager.py      # Gestor de instituciones en la base de datos
 │
-├── norm_manager.py             # Gestor de normas en la base de datos
-├── norm_parser.py              # Parser de normas (xml y md)
-├── norms_types_manager.py      # Gestor de tipos de normas en la base de datos
+├── loaders/                        # Clases para cargar datos desde archivos
+│   └── institutions.py
+│
+├── managers/                       # Clases para manejar datos en la base de datos
+│   ├── institutions.py
+│   ├── norms.py
+│   └── norms_types.py
+│
+├── utils/                          # Parsers, loggers y utils 
+│   ├── db_logger.py
+│   └── norm_parser.py              # Parser de normas (xml y md)
 │
 ├── data/
 │   ├── xml/                        # XMLs y schemas descargados (backup)
