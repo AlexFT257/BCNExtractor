@@ -6,15 +6,14 @@ import argparse
 import json
 import sys
 from pathlib import Path
-from typing import Optional
 
 from bcn_client import BCNClient
-from norm_parser import BCNXMLParser
-from norm_manager import NormsManager
-from norms_types_manager import TiposNormasManager
-from institution_loader import InstitutionLoader
-from institution_manager import InstitutionManager
-from db_logger import DBLogger
+from utils.norm_parser import BCNXMLParser
+from utils.db_logger import DBLogger
+from managers.norms import NormsManager
+from managers.norms_types import TiposNormasManager
+from managers.institutions import InstitutionManager
+from loaders.institutions import InstitutionLoader
 
 
 def init_managers():

@@ -1,6 +1,3 @@
-"""
-Manager para CRUD de normas en la base de datos
-"""
 import psycopg2
 import hashlib
 import json

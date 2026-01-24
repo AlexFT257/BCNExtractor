@@ -1,6 +1,3 @@
-"""
-Logger de descargas en PostgreSQL
-"""
 import psycopg2
 from typing import Optional, Dict, List
 from datetime import datetime, timedelta
