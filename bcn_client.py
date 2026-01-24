@@ -180,11 +180,16 @@ class BCNClient:
                     if id_tipo_norma:
                         id_tipo_norma = int(id_tipo_norma.strip("X"))
 
-                # Extraer organismos
+                # Extraer organismos (estan separados por ,)
                 organismos = []
                 for org in norma_elem.findall(".//ORGANISMO"):
-                    if org.text:
-                        organismos.append(org.text.strip())
+                    if org.text and org.text.find(",") != -1:
+                        orgs = org.text.split(",")
+                        # remover espacios en blanco
+                        orgs = [org.strip() for org in orgs]
+                        organismos.extend(orgs)
+                    else:
+                        organismos.append(org.text)
 
                 norma = {
                     "id": id_norma,

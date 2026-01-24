@@ -222,24 +222,36 @@ class NormsManager:
         """Búsqueda full-text en normas"""
         cursor = self.conn.cursor()
         cursor.execute("""
-            SELECT id, titulo, numero, estado, fecha_publicacion
+            SELECT id, id_tipo, titulo, numero, estado, fecha_publicacion
             FROM normas
             WHERE to_tsvector('spanish', titulo) @@ plainto_tsquery('spanish', %s)
                OR titulo ILIKE %s
             ORDER BY fecha_publicacion DESC
             LIMIT %s
         """, (query, f'%{query}%', limit))
+    
         
         results = [
             {
-                'id': row[0],
-                'titulo': row[1],
-                'numero': row[2],
-                'estado': row[3],
-                'fecha_publicacion': row[4]
+                'norma_id': row[0],
+                'tipo_id': row[1],
+                'titulo': row[2],
+                'numero': row[3],
+                'estado': row[4],
+                'fecha_publicacion': row[5]
             }
             for row in cursor.fetchall()
         ]
+        
+        # obtener el tipo de norma
+        cursor.execute("""
+            SELECT id, nombre
+            FROM tipos_normas
+        """)
+        types = {row[0]: row[1] for row in cursor.fetchall()}
+        
+        for result in results:
+            result['tipo_nombre'] = types.get(result['tipo_id'], 'None')
         
         cursor.close()
         return results
