@@ -6,22 +6,22 @@
 
 ```bash
 # Cargar instituciones desde CSV
-python cli_instituciones.py load data/instituciones.csv
+python institution_cli.py load data/instituciones.csv
 
 # Listar instituciones
-python cli_instituciones.py list --limit 10
+python institution_cli.py list --limit 10
 
 # Buscar institución
-python cli_instituciones.py list --search "ministerio"
+python institution_cli.py list --search "ministerio"
 
 # Ver estadísticas
-python cli_instituciones.py stats
+python institution_cli.py stats
 
 # Obtener detalles de una institución
-python cli_instituciones.py get 17
+python institution_cli.py get 17
 ```
 
-### 2. Listar Normas (sin guardar)
+### 2. Listar Normas
 
 ```bash
 # Listar normas de una institución
@@ -32,9 +32,6 @@ python bcn_cli.py list 17 --limit 10
 
 # Guardar lista como JSON
 python bcn_cli.py list 17 --output normas.json
-
-# Modo verbose (más detalles)
-python bcn_cli.py list 17 --verbose
 ```
 
 ### 3. Descargar Norma Específica
@@ -121,7 +118,7 @@ cat test.md
 
 ```bash
 # 1. Cargar instituciones
-python cli_instituciones.py load data/instituciones.csv
+python institution_cli.py load data/instituciones.csv
 
 # 2. Sincronizar primera institución (con límite)
 python bcn_cli.py sync 17 --limit 20
@@ -143,22 +140,23 @@ python bcn_cli.py cache stats
 python bcn_cli.py sync 17 --force
 
 # 3. Ver log de operaciones
-python bcn_cli.py stats --errors
+python bcn_cli.py stats
 ```
 
 ## Formato del CSV de Instituciones
 
 ```csv
-id,nombre,tipo
-17,FIA,pública
-1041,Armada de Chile,pública
-35,Asociación Chilena de Municipalidades,privada
+institucion,id
+Armada de Chile,1041
+Asociación Chilena de Municipalidades,35
+Centro de Energías Renovables,1046
+Comisión Chilena de Energía Nuclear,45
+Comisión Chilena del Cobre,42
 ```
 
 **Campos requeridos:**
-- `id` o `institucion`: ID numérico
-- `nombre`: Nombre de la institución
-- `tipo` (opcional): Tipo de institución
+- `id`: ID numérico
+- `institucion`: Nombre de la institución
 
 ## Tips y Trucos
 
@@ -177,7 +175,7 @@ python bcn_cli.py sync 17 --limit 5
 
 ### 3. Buscar ID de Institución
 ```bash
-python cli_instituciones.py list --search "FIA"
+python institution_cli.py list --search "FIA"
 ```
 
 ### 4. Limpiar Caché Periódicamente
@@ -197,10 +195,10 @@ python bcn_cli.py stats --errors
 ### Error: "Institución no encontrada"
 ```bash
 # Verificar que la institución esté cargada
-python cli_instituciones.py list --search "nombre"
+python institution_cli.py list --search "nombre"
 
 # Si no está, cargar instituciones
-python cli_instituciones.py load data/instituciones.csv
+python institution_cli.py load data/instituciones.csv
 ```
 
 ### Error: "No se pudo descargar norma"
