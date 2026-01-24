@@ -1,8 +1,8 @@
 import argparse
 import sys
 
-from institution_loader import InstitutionLoader
-from institution_manager import InstitutionManager
+from loaders.institutions import InstitutionLoader
+from managers.institutions import InstitutionManager
 
 
 def load_command(args):

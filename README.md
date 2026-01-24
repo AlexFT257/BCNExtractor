@@ -35,243 +35,148 @@ Proporcionar una base de datos estructurada y actualizable de normas legales chi
 
 ## Arquitectura
 
-### Stack Tecnológico
-
 ```
-┌─────────────────────────────────────────────────────────┐
-│                    USUARIO                              │
-└─────────────────────┬───────────────────────────────────┘
-                      │
-                      ▼
-┌─────────────────────────────────────────────────────────┐
-│              PYTHON APPLICATION                         │
-│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐   │
-│  │  BCN Client  │  │  XML Parser  │  │   Database   │   │
-│  │   (HTTP)     │→ │   (lxml)     │→ │   Services   │   │
-│  └──────────────┘  └──────────────┘  └──────────────┘   │
-└─────────────────────┬───────────────────────────────────┘
-                      │
-                      ▼
-┌─────────────────────────────────────────────────────────┐
-│              POSTGRESQL DATABASE                        │
-│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐   │
-│  │   Normas     │  │Instituciones │  │  Relaciones  │   │
-│  │              │  │              │  │              │   │
-│  │  (+ FTS)     │  │              │  │              │   │
-│  └──────────────┘  └──────────────┘  └──────────────┘   │
-└─────────────────────────────────────────────────────────┘
-                      │
-                      ▼
-┌─────────────────────────────────────────────────────────┐
-│              DOCKER VOLUMES                             │
-│  ┌──────────────┐              ┌──────────────┐         │
-│  │  PostgreSQL  │              │   XML Files  │         │
-│  │     Data     │              │   (backup)   │         │
-│  └──────────────┘              └──────────────┘         │
-└─────────────────────────────────────────────────────────┘
+┌───────────────────────────────────────────────────────────┐
+│                         USUARIO                           │
+└────────────────────────────┬──────────────────────────────┘
+                             │
+                             ▼
+┌───────────────────────────────────────────────────────────┐
+│                    INTERFACES DE USUARIO                  │
+│    ┌──────────────┐  ┌──────────────┐  ┌──────────────┐   │
+│    │   CLI App    │  │   REST API   │  │  Web UI (*)  │   │
+│    │  (bcn_cli)   │  │  (FastAPI)   │  │              │   │
+│    └──────────────┘  └──────────────┘  └──────────────┘   │
+└────────────────────────────┬──────────────────────────────┘
+                             │
+                             ▼
+┌───────────────────────────────────────────────────────────┐
+│                     PYTHON APPLICATION                    │
+│    ┌──────────────┐  ┌──────────────┐  ┌──────────────┐   │
+│    │  BCN Client  │  │  XML Parser  │  │   Managers   │   │
+│    │   (HTTP)     │→ │   (lxml)     │→ │  (Database)  │   │
+│    └──────────────┘  └──────────────┘  └──────────────┘   │
+└─────────────────────────────┬─────────────────────────────┘
+                              │
+                              ▼
+┌───────────────────────────────────────────────────────────┐
+│                    POSTGRESQL DATABASE                    │
+│    ┌──────────────┐  ┌──────────────┐  ┌──────────────┐   │
+│    │   Normas     │  │Instituciones │  │Tipos Normas  │   │
+│    │              │  │              │  │              │   │
+│    │  (+ FTS)     │  │              │  │              │   │
+│    └──────────────┘  └──────────────┘  └──────────────┘   │
+└─────────────────────────────┬─────────────────────────────┘
+                              │
+                              ▼
+┌───────────────────────────────────────────────────────────┐
+│                      DOCKER VOLUMES                       │
+│     ┌──────────────┐              ┌──────────────┐        │
+│     │  PostgreSQL  │              │   XML Files  │        │
+│     │     Data     │              │   (backup)   │        │
+│     └──────────────┘              └──────────────┘        │
+└───────────────────────────────────────────────────────────┘
+
+(*) En roadmap
 ```
 
 ### Componentes Principales
 
-1. **BCN Client**: Módulo HTTP para interactuar con los servicios web de la BCN
-2. **XML Parser**: Procesador de documentos XML usando lxml y xmltodict
-3. **Database Service**: Capa de abstracción para PostgreSQL usando SQLAlchemy
-4. **CLI Interface**: Interfaz de línea de comandos para gestionar el sistema
+1. **BCN Client** (`bcn_client.py`): Módulo HTTP para interactuar con los servicios web de la BCN
+2. **XML Parser** (`utils/norm_parser.py`): Procesador de documentos XML que convierte a Markdown y extrae metadatos
+3. **Managers** (`managers/`): Capa de abstracción para operaciones de base de datos
+   - `NormsManager`: Gestión de normas
+   - `InstitutionManager`: Gestión de instituciones
+   - `TiposNormasManager`: Gestión de tipos de normas
+4. **CLI Interface** (`bcn_cli.py`): Interfaz de línea de comandos para gestionar el sistema
+5. **REST API** (`api.py`): API REST con FastAPI para consultas programáticas
+6. **Database Logger** (`utils/db_logger.py`): Sistema de logging de operaciones
+
 
 ## Características
 
-### Versión 1.0 (MVP)
+### Versión Actual
 
 - ✅ Extracción de instituciones desde página de agrupadores de la BCN
 - ✅ Descarga de normas por institución vía servicios web
 - ✅ Almacenamiento en PostgreSQL con Docker
 - ✅ Parseo de XML y extracción de metadatos
+- ✅ Conversión de normas a formato Markdown
 - ✅ Búsqueda full-text (PostgreSQL FTS)
 - ✅ Sistema de logging y manejo de errores
 - ✅ Detección de cambios en normas (hash MD5)
-- ✅ CLI para operaciones básicas
+- ✅ CLI completa para operaciones básicas y avanzadas
+- ✅ API REST con FastAPI
+- ✅ Gestión de tipos de normas
+- ✅ Sincronización batch de normas por institución
 
 ### Roadmap (Futuras Versiones)
 
-- 🔲 API REST para consultas
 - 🔲 Actualización incremental de normas modificadas
-- 🔲 Exportación a formatos alternativos (JSON, CSV)
 - 🔲 Interfaz web para búsqueda y visualización
 - 🔲 Sistema de notificaciones para normas nuevas/modificadas
 - 🔲 Soporte para versiones históricas de normas
 - 🔲 Análisis de relaciones entre normas (modificaciones, derogaciones)
 
-## Requisitos Previos
+## Instalación
+
+### 1. Requisitos Previos
 
 - **Docker Desktop** (o Docker Engine + Docker Compose)
   - Windows: [Descargar Docker Desktop](https://docs.docker.com/desktop/install/windows-install/)
   - Linux: [Instalar Docker Engine](https://docs.docker.com/engine/install/)
   - macOS: [Descargar Docker Desktop](https://docs.docker.com/desktop/install/mac-install/)
-  
 - **Python 3.9 o superior**
-  ```bash
-  python --version  # Verificar versión
-  ```
+- **Git**
 
-- **Git** (para clonar el repositorio)
-  ```bash
-  git --version  # Verificar instalación
-  ```
-
-## Instalación
-
-### 1. Clonar el Repositorio
+### 2. Instalación
 
 ```bash
-git clone https://github.com/AlexFT257/BCNExtractor.git
-cd BCNExtractor
-```
+# Clonar repositorio
+git clone https://github.com/tu-usuario/extractor-normas-bcn.git
+cd extractor-normas-bcn
 
-### 2. Configurar Variables de Entorno
-
-Crea un archivo `.env` en la raíz del proyecto:
-
-```bash
-# .env
-POSTGRES_USER=bcn_user
-POSTGRES_PASSWORD=tu_password_seguro
-POSTGRES_DB=bcn_normas
-POSTGRES_PORT=5432
-
-# Configuración de la aplicación
-LOG_LEVEL=INFO
-XML_STORAGE_PATH=./data/xml
-```
-
-### 3. Iniciar Servicios con Docker
-
-```bash
-# Construir e iniciar contenedores
+# Iniciar PostgreSQL
 docker-compose up -d
-
-# Verificar que los servicios estén corriendo
-docker-compose ps
-```
-
-### 4. Instalar Dependencias de Python
-
-```bash
-# Crear entorno virtual (recomendado)
-python -m venv venv
-
-# Activar entorno virtual
-# Windows:
-venv\Scripts\activate
-# Linux/macOS:
-source venv/bin/activate
 
 # Instalar dependencias
 pip install -r requirements.txt
+
+# Configurar .env
+cp .env.example .env
+# Editar .env con tus credenciales
 ```
 
-## Uso
+### 3. Uso Básico
 
-Esta sección detalla cómo interactuar con el sistema a través de las diferentes interfaces de línea de comandos (CLI).
-
-### 1. Comandos del CLI Principal (`bcn_cli.py`)
-
-Estos comandos se utilizan para la extracción, sincronización, búsqueda y gestión general del sistema de normas.
-
-#### Inicialización de la Base de Datos
 ```bash
-# Inicializa el esquema de la base de datos (recomendado antes de cualquier otra operación)
-python bcn_cli.py init
-```
+# Cargar instituciones
+python cli_instituciones.py load data/instituciones.csv
 
-#### Listar Normas
-```bash
-# Lista normas de una institución desde la BCN
-python bcn_cli.py list 17 --limit 10
+# Listar normas de una institución
+python bcn_cli.py list 17
 
-# Lista normas con detalles completos
-python bcn_cli.py list 17 -v
+# Sincronizar a base de datos
+python bcn_cli.py sync 17 --limit 10
 
-# Guarda la lista de normas en un archivo JSON
-python bcn_cli.py list 17 -o normas_inst_17.json
-```
-
-#### Descargar Norma Específica
-```bash
-# Descarga los metadatos de una norma y los muestra en consola (vista previa)
-python bcn_cli.py get 206396
-
-# Descarga el contenido completo de una norma y lo guarda como Markdown
-python bcn_cli.py get 206396 --output_md ./output/norma_206396.md
-
-# Descarga el contenido completo de una norma y lo guarda como XML
-python bcn_cli.py get 206396 --output_xml ./output/norma_206396.xml
-
-# Descarga la norma completa (incluyendo contenido)
-python bcn_cli.py get 206396 -f --output_md ./output/norma_206396_full.md
-```
-
-#### Sincronizar Normas con la Base de Datos
-```bash
-# Sincroniza normas de una institución en la base de datos
-python bcn_cli.py sync 17 --limit 5
-
-# Fuerza la actualización de normas existentes
-python bcn_cli.py sync 17 --force
-```
-
-#### Buscar Normas Almacenadas
-```bash
-# Busca normas en la base de datos local por una palabra clave
+# Buscar normas
 python bcn_cli.py search "medio ambiente"
 
-# Limita el número de resultados de la búsqueda
-python bcn_cli.py search "derecho laboral" --limit 15
-```
-
-#### Ver Estadísticas del Sistema
-```bash
-# Muestra estadísticas generales del sistema
+# Ver estadísticas
 python bcn_cli.py stats
-
-# Muestra estadísticas incluyendo los errores recientes
-python bcn_cli.py stats --errors
 ```
 
-#### Gestionar Caché
-```bash
-# Consulta información sobre el caché local
-python bcn_cli.py cache stats
+## Documentación
 
-# Limpia el caché local de forma interactiva
-python bcn_cli.py cache clear
+- [Guía de Uso](docs/USAGE.md)
+- [Arquitectura](docs/ARCHITECTURE.md)
+- [API de la BCN](docs/API_BCN.md)
 
-# Limpia el caché local sin confirmación
-python bcn_cli.py cache clear --force
-```
+FastAPI genera automáticamente documentación:
 
-### 2. Comandos del CLI de Instituciones (`institution_cli.py`)
-
-Estos comandos permiten la gestión de las instituciones asociadas a las normas.
-
-```bash
-# Cargar instituciones desde un archivo CSV (actualiza existentes si los IDs coinciden)
-python institution_cli.py load data/instituciones.csv
-
-# Reemplazar todas las instituciones existentes con las del CSV
-python institution_cli.py load data/instituciones.csv --mode replace
-
-# Solo agregar nuevas instituciones del CSV, ignorando duplicados
-python institution_cli.py load data/instituciones.csv --mode append
-
-# Listar todas las instituciones almacenadas
-python institution_cli.py list
-
-# Buscar instituciones por una palabra clave en su nombre
-python institution_cli.py list --search ministerio
-
-# Ver detalles de una institución específica usando su ID
-python institution_cli.py get 1041
-```
+- **Swagger UI**: `http://localhost:8000/docs`
+- **ReDoc**: `http://localhost:8000/redoc`
+- **OpenAPI**: `http://localhost:8000/openapi.json`
 
 ## 📁 Estructura del Proyecto
 
@@ -286,6 +191,8 @@ BCNExtractor/
 ├── bcn_client.py               # Cliente para la API de la BCN
 ├── bcn_cli.py                  # CLI para manejar la aplicación
 ├── institution_cli.py          # CLI para manejar instituciones
+│
+├── api.py                      # App de Fast API
 │
 ├── loaders/                        # Clases para cargar datos desde archivos
 │   └── institutions.py
@@ -316,6 +223,8 @@ BCNExtractor/
 └── docs/
     ├── API_BCN.md              # Documentación servicios BCN
     └── DATABASE_SCHEMA.md      # Esquema de base de datos [WIP]
+    └── USAGE.md                # Guia de uso y endpoints
+    └── ARCHITECTURE.md         # Arquitectura del proyecto
 ```
 
 ## 🗄️ Base de Datos
@@ -383,8 +292,6 @@ descargas (
 - Índices en `tipo`, `estado`, `fecha_publicacion`
 - JSONB indexado para búsquedas en metadata
 
-Ver [DATABASE_SCHEMA.md](docs/DATABASE_SCHEMA.md) para detalles completos.
-
 ## 🗺️ Roadmap
 
 ### Fase 1: MVP (Versión 1.0)
@@ -401,20 +308,15 @@ Ver [DATABASE_SCHEMA.md](docs/DATABASE_SCHEMA.md) para detalles completos.
 - [ ] Métricas de performance
 
 ### Fase 3: API (Versión 2.0)
-- [ ] API REST con FastAPI
+- [x] API REST con FastAPI
 - [ ] Endpoints de búsqueda avanzada
-- [ ] Documentación OpenAPI
+- [x] Documentación OpenAPI
 
 ### Fase 4: Frontend (Versión 3.0)
 - [ ] Interfaz web de búsqueda
 - [ ] Dashboard de estadísticas
 - [ ] Visualización de relaciones entre normas
 
-### Fase 5: Análisis Avanzado
-- [ ] NLP para extracción de entidades
-- [ ] Clasificación automática por materias
-- [ ] Detección de similitud entre normas
-- [ ] Generación de resúmenes automáticos
 
 ## 📄 Licencia
 
@@ -432,4 +334,3 @@ Este proyecto está licenciado bajo **Creative Commons Attribution-NonCommercial
 - **Compartir Igual**: Si remezclas, transformas o construyes sobre el material, debes distribuir tus contribuciones bajo la misma licencia
 
 Para uso comercial, por favor contacta a [ftb2570@gmail.com](mailto:ftb2570@gmail.com).
-

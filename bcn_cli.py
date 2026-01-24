@@ -370,8 +370,8 @@ def search_command(args):
         
         for i, norma in enumerate(results, 1):
             estado_icon = "🟢" if norma['estado'] == 'vigente' else "🔴"
-            print(f"{i:2d}. {estado_icon} [{norma['id']:6d}] {norma['titulo'][:60]}")
-            print(f"\t{norma['numero']} - {norma['fecha_publicacion']}")
+            print(f"{i:2d}. {estado_icon} [{norma['norma_id']:6d}] {norma['titulo'][:60]}")
+            print(f"\tTipo: {norma['tipo_nombre']} ({norma['tipo_id']}) - Numero: {norma['numero']} - Fecha Publicacion: {norma['fecha_publicacion']} - Estado: {norma['estado']}")
             print()
         
         return 0
