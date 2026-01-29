@@ -1,13 +1,13 @@
 from typing import Dict, List, Optional, Union
-from datetime import date
 from fastapi import FastAPI
-from pydantic import BaseModel
 from bcn_client import BCNClient
-from utils.norm_parser import BCNXMLParser, NormaMetadata
+from utils.norm_parser import BCNXMLParser
 from utils.db_logger import DBLogger
 from managers.norms import NormsManager
 from managers.institutions import InstitutionManager
 from managers.norms_types import TiposNormasManager
+
+from utils.norm_types import Norm, NormResponse
 
 app = FastAPI()
 client = BCNClient()
@@ -17,19 +17,8 @@ institution_manager = InstitutionManager()
 tipos_normas_manager = TiposNormasManager()
 logger = DBLogger()
 
-class Norm(BaseModel):
-    norma_id: int
-    tipo: str
-    numero: str
-    titulo: str
-    fecha_publicacion: Optional[date]
-    fecha_promulgacion: Optional[date]
-    organismos: List[str]
-    derogado: bool
-    es_tratado: bool
-    materias: List[str]
 
-
+        
 @app.get("/normas/{norma_id}")
 def get_norma(norma_id: int):
     norma = client.get_norma_completa(norma_id)
@@ -38,10 +27,10 @@ def get_norma(norma_id: int):
         
     markdown, norm_data = parser.parse_from_string(norma)
     
-    return {
-        "norma": norm_data,
-        "markdown": markdown
-    }
+    return NormResponse(
+        norma=norm_data,
+        markdown=markdown
+    )
 
 @app.post("/normas")
 def get_normas_batch(normas_id:list[int]):
@@ -80,7 +69,7 @@ def get_institucion(institucion_id: int):
     if not institucion:
         return {"error": "Institucion no encontrada"}
         
-    return {"institucion": institucion}
+    return institucion
 
 @app.get("/instituciones")
 def get_instituciones():
@@ -88,7 +77,7 @@ def get_instituciones():
     if not instituciones:
         return {"error": "No se encontraron instituciones"}
         
-    return {"instituciones": instituciones}
+    return instituciones
 
 @app.get("/instituciones/{institucion_id}/normas")
 def get_normas_por_institucion(institucion_id: int, limit: int | None = None):
@@ -103,7 +92,7 @@ def get_normas_por_institucion(institucion_id: int, limit: int | None = None):
     if limit:
         normas = normas[:limit]
         
-    return {"normas": normas}
+    return normas
 
 @app.put("/instituciones/{institucion_id}/normas")
 def update_normas_por_institucion(institucion_id: int, limit: int | None = None):

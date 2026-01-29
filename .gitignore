@@ -1,9 +1,13 @@
 .venv
 .env
 *.pyc
+*__init__.py
 __pycache__
 *.logs
 *.log
+/htmlcov
+.pytest_cache
+.coverage
 data/logs
 data/cache
 data/xml/*

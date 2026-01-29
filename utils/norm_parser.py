@@ -1,22 +1,7 @@
 import xml.etree.ElementTree as ET
-from dataclasses import dataclass
 from typing import Optional, List
 from datetime import date
-
-
-@dataclass
-class NormaMetadata:
-    """Metadatos extraídos de la norma"""
-    norma_id: int
-    tipo: str
-    numero: str
-    titulo: str
-    fecha_publicacion: Optional[date]
-    fecha_promulgacion: Optional[date]
-    organismos: List[str]
-    derogado: bool
-    es_tratado: bool
-    materias: List[str]
+from utils.norm_types import Norm
 
 
 class BCNXMLParser:
@@ -33,18 +18,18 @@ class BCNXMLParser:
     def __init__(self, namespace: str = "http://www.leychile.cl/esquemas"):
         self.ns = {'bcn': namespace}
     
-    def parse_from_file(self, filepath: str) -> tuple[str, NormaMetadata]:
+    def parse_from_file(self, filepath: str) -> tuple[str, Norm]:
         """Parsea un archivo XML y retorna Markdown y metadatos"""
         tree = ET.parse(filepath)
         root = tree.getroot()
         return self._parse_norma(root)
     
-    def parse_from_string(self, xml_string: str) -> tuple[str, NormaMetadata]:
+    def parse_from_string(self, xml_string: str) -> tuple[str, Norm]:
         """Parsea un string XML y retorna Markdown y metadatos"""
         root = ET.fromstring(xml_string)
         return self._parse_norma(root)
     
-    def _parse_norma(self, root: ET.Element) -> tuple[str, NormaMetadata]:
+    def _parse_norma(self, root: ET.Element) -> tuple[str, Norm]:
         """Procesa el elemento raíz Norma"""
         md_parts = []
         
@@ -79,7 +64,7 @@ class BCNXMLParser:
         
         return '\n'.join(md_parts), metadata
     
-    def _extract_metadata(self, root: ET.Element) -> NormaMetadata:
+    def _extract_metadata(self, root: ET.Element) -> Norm:
         """Extrae metadatos de la norma"""
         identificador = root.find('bcn:Identificador', self.ns)
         metadatos = root.find('bcn:Metadatos', self.ns)
@@ -106,7 +91,7 @@ class BCNXMLParser:
             mat.text for mat in metadatos.findall('.//bcn:Materia', self.ns)
         ]
         
-        return NormaMetadata(
+        return Norm(
             norma_id=int(root.get('normaId')),
             tipo=tipo,
             numero=numero,
@@ -119,7 +104,7 @@ class BCNXMLParser:
             materias=materias
         )
     
-    def _format_info_basica(self, metadata: NormaMetadata) -> str:
+    def _format_info_basica(self, metadata: Norm) -> str:
         """Formatea la información básica como Markdown"""
         lines = ["\n## Información Básica\n"]
         

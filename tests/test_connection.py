@@ -17,12 +17,6 @@ def test_connection():
         'password': os.getenv('POSTGRES_PASSWORD', 'changeme')
     }
     
-    print("Intentando conectar a PostgreSQL...")
-    print(f"   Host: {db_config['host']}:{db_config['port']}")
-    print(f"   Database: {db_config['database']}")
-    print(f"   User: {db_config['user']}")
-    print()
-    
     try:
         # Intentar conexión
         conn = psycopg2.connect(**db_config)
@@ -31,9 +25,8 @@ def test_connection():
         # Verificar versión de PostgreSQL
         cursor.execute('SELECT version();')
         version = cursor.fetchone()[0]
-        print("Conexión exitosa!")
-        print(f"   PostgreSQL: {version.split(',')[0]}")
-        print()
+        assert True
+        assert version.split(',')[0].startswith('PostgreSQL')
         
         # Verificar extensiones
         cursor.execute("""
@@ -44,13 +37,8 @@ def test_connection():
         """)
         
         extensiones = cursor.fetchall()
-        if extensiones:
-            print("📦 Extensiones instaladas:")
-            for ext in extensiones:
-                print(f"   - {ext[0]} (v{ext[1]})")
-        else:
-            print("No se encontraron extensiones")
-        print()
+        
+        assert extensiones, "No se encontraron extensiones"
         
         # Verificar esquemas
         cursor.execute("""
@@ -60,11 +48,7 @@ def test_connection():
         """)
         
         esquema = cursor.fetchone()
-        if esquema:
-            print("Esquema 'bcn' encontrado")
-        else:
-            print("Esquema 'bcn' no encontrado")
-        print()
+        assert esquema, "Esquema 'bcn' no encontrado"
         
         # Listar tablas existentes
         cursor.execute("""
@@ -75,35 +59,19 @@ def test_connection():
         """)
         
         tablas = cursor.fetchall()
-        if tablas:
-            print("Tablas existentes:")
-            for tabla in tablas:
-                print(f"   - {tabla[0]}")
-        else:
-            print("No hay tablas creadas aún")
-        print()
+        
+        assert tablas, "No hay tablas creadas aún"
         
         # Cerrar conexión
         cursor.close()
         conn.close()
-        
-        print("Test completado exitosamente")
-        return True
+        assert True
         
     except psycopg2.OperationalError as e:
-        print("❌ Error de conexión:")
-        print(f"   {e}")
-        print()
-        print("Verifica que:")
-        print("   1. Docker Desktop esté corriendo")
-        print("   2. El contenedor PostgreSQL esté activo: docker-compose ps")
-        print("   3. Las credenciales en .env sean correctas")
-        return False
+        print("Error de conexión:")
+        print(f"\t{e}")
+        assert False
         
     except Exception as e:
         print(f"Error inesperado: {e}")
-        return False
-
-
-if __name__ == "__main__":
-    test_connection()
+        assert False

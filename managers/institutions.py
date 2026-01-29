@@ -3,6 +3,7 @@ from pathlib import Path
 from typing import List, Dict, Optional
 import os
 from dotenv import load_dotenv
+from utils.institution_types import Institution
 
 load_dotenv()
 
@@ -25,7 +26,7 @@ class InstitutionManager():
             self.own_connection = True
             
     
-    def get_all(self)-> List[Dict]:
+    def get_all(self)-> List[Institution]:
         cursor = self.conn.cursor()
         
         cursor.execute(f"""
@@ -35,19 +36,19 @@ class InstitutionManager():
         """)
         
         instituciones = [
-            {
-                "id": row[0],
-                "nombre": row[1],
-                "fecha_agregada": row[2],
-                "fecha_actualizacion": row[3]
-            }
+            Institution(
+                id=row[0],
+                nombre=row[1],
+                fecha_agregada=row[2],
+                fecha_actualizada=row[3]
+            )
             for row in cursor.fetchall()
         ]
         
         cursor.close()
         return instituciones
         
-    def get_by_id(self, id:int)->Optional[Dict]:
+    def get_by_id(self, id:int)->Optional[Institution]:
         cursor = self.conn.cursor()
         
         cursor.execute(f"""
@@ -60,16 +61,16 @@ class InstitutionManager():
         cursor.close()
         
         if row:
-            return {
-                "id": row[0],
-                "nombre": row[1],
-                "fecha_agregada": row[2],
-                "fecha_actualizacion": row[3]
-            }
+            return Institution(
+                id=row[0],
+                nombre=row[1],
+                fecha_agregada=row[2],
+                fecha_actualizada=row[3]
+            )
         else:
             return None
             
-    def search(self, query:str)->List[Dict]:
+    def search(self, query:str)->List[Institution]:
         cursor = self.conn.cursor()
         
         cursor.execute(f"""
@@ -80,12 +81,12 @@ class InstitutionManager():
         """, (f"%{query}%",))
         
         instituciones = [
-            {
-                "id": row[0],
-                "nombre": row[1],
-                "fecha_agregada": row[2],
-                "fecha_actualizada": row[3]
-            }
+            Institution(
+                id= row[0],
+                nombre= row[1],
+                fecha_agregada= row[2],
+                fecha_actualizada= row[3]
+            )
             for row in cursor.fetchall()
         ]
         
