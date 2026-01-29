@@ -6,6 +6,7 @@
 
 Este proyecto está pensado como la capa de **Extracción** de un pipeline ELT (Extract, Load, Transform) para análisis legal, permitiendo a investigadores, desarrolladores y organizaciones acceder de forma programática a las normas relevantes para instituciones específicas.
 
+![Status](https://img.shields.io/badge/status-active%20development-green)
 [![License: CC BY-NC-SA 4.0](https://img.shields.io/badge/License-CC%20BY--NC--SA%204.0-lightgrey.svg)](https://creativecommons.org/licenses/by-nc-sa/4.0/)
 [![Python 3.9+](https://img.shields.io/badge/python-3.9+-blue.svg)](https://www.python.org/downloads/)
 [![PostgreSQL 15+](https://img.shields.io/badge/postgresql-15+-blue.svg)](https://www.postgresql.org/)
@@ -133,8 +134,8 @@ Proporcionar una base de datos estructurada y actualizable de normas legales chi
 
 ```bash
 # Clonar repositorio
-git clone https://github.com/tu-usuario/extractor-normas-bcn.git
-cd extractor-normas-bcn
+git clone https://github.com/AlexFT257/BCNExtractor.git
+cd BCNExtractor
 
 # Iniciar PostgreSQL
 docker-compose up -d
@@ -193,6 +194,7 @@ BCNExtractor/
 ├── institution_cli.py          # CLI para manejar instituciones
 │
 ├── api.py                      # App de Fast API
+├── test_api.py                 # Test de la API
 │
 ├── loaders/                        # Clases para cargar datos desde archivos
 │   └── institutions.py
@@ -229,7 +231,7 @@ BCNExtractor/
 
 ## 🗄️ Base de Datos
 
-### Esquema Principal (WIP)
+### Esquema Principal
 
 ```sql
 -- Tabla de normas
@@ -305,11 +307,13 @@ descargas (
 - [x] Sistema de caché para reducir requests
 - [x] Rate limiting configurable
 - [x] Reintentos automáticos en fallos
+- [ ] Benchmarking
 - [ ] Métricas de performance
 
 ### Fase 3: API (Versión 2.0)
 - [x] API REST con FastAPI
-- [ ] Endpoints de búsqueda avanzada
+- [x] Test de la API
+- [x] Endpoints de búsqueda avanzada
 - [x] Documentación OpenAPI
 
 ### Fase 4: Frontend (Versión 3.0)
