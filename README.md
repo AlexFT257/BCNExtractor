@@ -172,6 +172,7 @@ python bcn_cli.py stats
 - [Guía de Uso](docs/USAGE.md)
 - [Arquitectura](docs/ARCHITECTURE.md)
 - [API de la BCN](docs/API_BCN.md)
+- [Rendimiento](docs/PERFORMANCE.md)
 
 FastAPI genera automáticamente documentación:
 
@@ -218,71 +219,71 @@ BCNExtractor/
 │   └── bcn_schema.xml              # Schema del xml de la BCN
 │
 ├── tests/                          # [WIP]
-│   ├── test_bcn_client.py
-│   ├── test_parser.py
-│   └── test_database.py
+│   ├── test_connection.py
+│   └── test_performance.py
 │
 └── docs/
     ├── API_BCN.md              # Documentación servicios BCN
-    └── DATABASE_SCHEMA.md      # Esquema de base de datos [WIP]
+    └── DATABASE_SCHEMA.md      # Esquema de base de datos 
     └── USAGE.md                # Guia de uso y endpoints
     └── ARCHITECTURE.md         # Arquitectura del proyecto
 ```
 
-## 🗄️ Base de Datos
+## Base de Datos
 
 ### Esquema Principal
 
 ```sql
--- Tabla de normas
-normas (
-  id_norma INTEGER PRIMARY KEY,
-  tipo VARCHAR(50),
-  numero VARCHAR(50),
-  titulo TEXT,
-  fecha_promulgacion DATE,
-  fecha_publicacion DATE,
-  organismo TEXT,
-  estado VARCHAR(50),
-  contenido_texto TEXT,
-  metadata_json JSONB,
-  xml_path TEXT,
-  hash_xml VARCHAR(32),
-  fecha_descarga TIMESTAMP,
-  fecha_actualizacion TIMESTAMP
-)
-
--- Tabla de instituciones
-instituciones (
-  id INTEGER PRIMARY KEY,
-  nombre TEXT NOT NULL,
-  fecha_agregada TIMESTAMP,
-  fecha_actualizacion TIMESTAMP
-)
-
--- Tabla de tipos de normas
+-- Tipos de normas (catálogo)
 tipos_normas (
-  id INTEGER PRIMARY KEY,
-  nombre TEXT NOT NULL,
+  id SERIAL PRIMARY KEY,
+  nombre TEXT NOT NULL UNIQUE,
   abreviatura TEXT,
+  fecha_creacion TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  fecha_actualizacion TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+)
+
+-- Instituciones
+instituciones (
+  id INTEGER PRIMARY KEY,              -- ID propio de la BCN
+  nombre TEXT NOT NULL,
   fecha_agregada TIMESTAMP,
+  fecha_actualizada TIMESTAMP
+)
+
+-- Normas (tabla central)
+normas (
+  id INTEGER PRIMARY KEY,              -- ID propio de la BCN
+  id_tipo INTEGER REFERENCES tipos_normas(id),
+  numero VARCHAR(50),
+  titulo TEXT,                          -- índice GIN para full-text search
+  estado VARCHAR(20) DEFAULT 'vigente', -- 'vigente' | 'derogada'
+  fecha_publicacion DATE,
+  fecha_promulgacion DATE,
+  organismo TEXT,
+  xml_path TEXT,                        -- respaldo XML en disco
+  md_path TEXT,                         -- Markdown generado en disco
+  contenido_texto TEXT,
+  metadata_json JSONB,                  -- materias, organismos, flags
+  hash_xml VARCHAR(32),                 -- MD5 para detectar cambios
+  fecha_descarga TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   fecha_actualizacion TIMESTAMP
 )
 
--- Relación muchos-a-muchos
+-- Relación muchos-a-muchos normas ↔ instituciones
 normas_instituciones (
-  id_norma INTEGER,
-  id_institucion INTEGER,
-  fecha_asociacion TIMESTAMP,
+  id_norma INTEGER REFERENCES normas(id),
+  id_institucion INTEGER REFERENCES instituciones(id),
+  fecha_asociacion TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (id_norma, id_institucion)
 )
 
--- Log de descargas
+-- Log de operaciones de descarga/sincronización
 descargas (
   id SERIAL PRIMARY KEY,
-  id_norma INTEGER,
-  tipo_descarga VARCHAR(50),
-  estado VARCHAR(50),
+  id_norma INTEGER REFERENCES normas(id),
+  tipo_descarga VARCHAR(50),           -- 'descarga' | 'sincronizacion'
+  estado VARCHAR(50),                  -- 'exitosa' | 'error'
   fecha_intento TIMESTAMP,
   error_mensaje TEXT
 )
@@ -290,11 +291,12 @@ descargas (
 
 ### Índices y Optimizaciones
 
-- Full-text search en `contenido_texto` usando PostgreSQL `tsvector`
-- Índices en `tipo`, `estado`, `fecha_publicacion`
-- JSONB indexado para búsquedas en metadata
+- **Full-text search** en `titulo` mediante índice GIN sobre `to_tsvector('spanish', titulo)`
+- **Índices B-tree** en `normas.id_tipo`, `normas.estado` y `tipos_normas.nombre`
+- **Índice GIN** disponible sobre `metadata_json` para consultas por claves JSONB
+- **Detección de cambios** mediante hash MD5 del XML: evita upserts innecesarios en sincronizaciones masivas
 
-## 🗺️ Roadmap
+## Roadmap
 
 ### Fase 1: MVP (Versión 1.0)
 - [x] Extracción de instituciones
@@ -307,8 +309,8 @@ descargas (
 - [x] Sistema de caché para reducir requests
 - [x] Rate limiting configurable
 - [x] Reintentos automáticos en fallos
-- [ ] Benchmarking
-- [ ] Métricas de performance
+- [x] Benchmarking
+- [x] Métricas de performance
 
 ### Fase 3: API (Versión 2.0)
 - [x] API REST con FastAPI
