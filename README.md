@@ -320,6 +320,7 @@ descargas (
 
 ### Fase 4: Frontend (Versión 3.0)
 - [ ] Interfaz web de búsqueda
+- [ ] Interfaz web de documentación
 - [ ] Dashboard de estadísticas
 - [ ] Visualización de relaciones entre normas
 
