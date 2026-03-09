@@ -1,343 +1,128 @@
-# Extractor de Normas BCN
+# BCN Extractor
 
-> Sistema de extracción y almacenamiento de normas legales chilenas desde la Biblioteca del Congreso Nacional (BCN)
+> Pipeline ELT para descargar, procesar y almacenar normas legales chilenas desde la Biblioteca del Congreso Nacional (BCN).
 
-**Extractor de Normas BCN** es una herramienta de código abierto diseñada para automatizar la descarga, procesamiento y almacenamiento de normas legales chilenas (leyes, decretos, resoluciones, etc.) desde los servicios web de la [Biblioteca del Congreso Nacional de Chile](https://www.bcn.cl/leychile/).
-
-Este proyecto está pensado como la capa de **Extracción** de un pipeline ELT (Extract, Load, Transform) para análisis legal, permitiendo a investigadores, desarrolladores y organizaciones acceder de forma programática a las normas relevantes para instituciones específicas.
-
-![Status](https://img.shields.io/badge/status-active%20development-green)
+[![Status](https://img.shields.io/badge/status-active%20development-green)](https://github.com/AlexFT257/BCNExtractor)
 [![License: CC BY-NC-SA 4.0](https://img.shields.io/badge/License-CC%20BY--NC--SA%204.0-lightgrey.svg)](https://creativecommons.org/licenses/by-nc-sa/4.0/)
 [![Python 3.9+](https://img.shields.io/badge/python-3.9+-blue.svg)](https://www.python.org/downloads/)
 [![PostgreSQL 15+](https://img.shields.io/badge/postgresql-15+-blue.svg)](https://www.postgresql.org/)
 
-> [!NOTE]
-> Este proyecto no está afiliado oficialmente con la Biblioteca del Congreso Nacional de Chile. Es una herramienta independiente que utiliza sus servicios web públicos.
+Herramienta de código abierto pensada para investigadores, desarrolladores y organizaciones que necesiten acceso programático a la legislación chilena. Cubre el pipeline completo: extracción desde los servicios web de la BCN, parseo de XML, almacenamiento en PostgreSQL y búsqueda full-text.
 
-## Objetivos
+> Este proyecto no está afiliado oficialmente con la Biblioteca del Congreso Nacional de Chile.
 
-### Objetivo Principal
-Proporcionar una base de datos estructurada y actualizable de normas legales chilenas organizadas por instituciones, facilitando el acceso programático a la legislación nacional.
+**Documentación completa:** [bcne.alexft.dev](https://bcne.alexft.dev/)
 
-### Objetivos Específicos
+---
 
-1. **Extracción Automatizada**: Descargar normas desde los servicios web de la BCN de forma eficiente y resiliente
-2. **Almacenamiento Estructurado**: Mantener una base de datos PostgreSQL con las normas, instituciones y sus relaciones
-3. **Búsqueda Eficiente**: Implementar capacidades de búsqueda full-text sobre el contenido de las normas
-4. **Trazabilidad**: Registrar el historial de descargas y actualizaciones de cada norma
-5. **Replicabilidad**: Facilitar el despliegue mediante Docker para cualquier usuario
+## Requisitos
 
-### Casos de Uso
-
-- **Análisis Legal**: Investigadores que necesitan analizar legislación específica de un sector
-- **Compliance**: Empresas que deben monitorear normativas aplicables a su industria
-- **Transparencia**: Ciudadanos y organizaciones que buscan acceder a información legal estructurada
-- **Data Science**: Científicos de datos que quieren aplicar NLP/ML sobre corpus legales
-
-## Arquitectura
-
-```
-┌───────────────────────────────────────────────────────────┐
-│                         USUARIO                           │
-└────────────────────────────┬──────────────────────────────┘
-                             │
-                             ▼
-┌───────────────────────────────────────────────────────────┐
-│                    INTERFACES DE USUARIO                  │
-│    ┌──────────────┐  ┌──────────────┐  ┌──────────────┐   │
-│    │   CLI App    │  │   REST API   │  │  Web UI (*)  │   │
-│    │  (bcn_cli)   │  │  (FastAPI)   │  │              │   │
-│    └──────────────┘  └──────────────┘  └──────────────┘   │
-└────────────────────────────┬──────────────────────────────┘
-                             │
-                             ▼
-┌───────────────────────────────────────────────────────────┐
-│                     PYTHON APPLICATION                    │
-│    ┌──────────────┐  ┌──────────────┐  ┌──────────────┐   │
-│    │  BCN Client  │  │  XML Parser  │  │   Managers   │   │
-│    │   (HTTP)     │→ │   (lxml)     │→ │  (Database)  │   │
-│    └──────────────┘  └──────────────┘  └──────────────┘   │
-└─────────────────────────────┬─────────────────────────────┘
-                              │
-                              ▼
-┌───────────────────────────────────────────────────────────┐
-│                    POSTGRESQL DATABASE                    │
-│    ┌──────────────┐  ┌──────────────┐  ┌──────────────┐   │
-│    │   Normas     │  │Instituciones │  │Tipos Normas  │   │
-│    │              │  │              │  │              │   │
-│    │  (+ FTS)     │  │              │  │              │   │
-│    └──────────────┘  └──────────────┘  └──────────────┘   │
-└─────────────────────────────┬─────────────────────────────┘
-                              │
-                              ▼
-┌───────────────────────────────────────────────────────────┐
-│                      DOCKER VOLUMES                       │
-│     ┌──────────────┐              ┌──────────────┐        │
-│     │  PostgreSQL  │              │   XML Files  │        │
-│     │     Data     │              │   (backup)   │        │
-│     └──────────────┘              └──────────────┘        │
-└───────────────────────────────────────────────────────────┘
-
-(*) En roadmap
-```
-
-### Componentes Principales
-
-1. **BCN Client** (`bcn_client.py`): Módulo HTTP para interactuar con los servicios web de la BCN
-2. **XML Parser** (`utils/norm_parser.py`): Procesador de documentos XML que convierte a Markdown y extrae metadatos
-3. **Managers** (`managers/`): Capa de abstracción para operaciones de base de datos
-   - `NormsManager`: Gestión de normas
-   - `InstitutionManager`: Gestión de instituciones
-   - `TiposNormasManager`: Gestión de tipos de normas
-4. **CLI Interface** (`bcn_cli.py`): Interfaz de línea de comandos para gestionar el sistema
-5. **REST API** (`api.py`): API REST con FastAPI para consultas programáticas
-6. **Database Logger** (`utils/db_logger.py`): Sistema de logging de operaciones
-
-
-## Características
-
-### Versión Actual
-
-- ✅ Extracción de instituciones desde página de agrupadores de la BCN
-- ✅ Descarga de normas por institución vía servicios web
-- ✅ Almacenamiento en PostgreSQL con Docker
-- ✅ Parseo de XML y extracción de metadatos
-- ✅ Conversión de normas a formato Markdown
-- ✅ Búsqueda full-text (PostgreSQL FTS)
-- ✅ Sistema de logging y manejo de errores
-- ✅ Detección de cambios en normas (hash MD5)
-- ✅ CLI completa para operaciones básicas y avanzadas
-- ✅ API REST con FastAPI
-- ✅ Gestión de tipos de normas
-- ✅ Sincronización batch de normas por institución
-
-### Roadmap (Futuras Versiones)
-
-- 🔲 Actualización incremental de normas modificadas
-- 🔲 Interfaz web para búsqueda y visualización
-- 🔲 Sistema de notificaciones para normas nuevas/modificadas
-- 🔲 Soporte para versiones históricas de normas
-- 🔲 Análisis de relaciones entre normas (modificaciones, derogaciones)
+- Docker Desktop (o Docker Engine + Compose)
+- Python 3.9+
+- Git
 
 ## Instalación
 
-### 1. Requisitos Previos
-
-- **Docker Desktop** (o Docker Engine + Docker Compose)
-  - Windows: [Descargar Docker Desktop](https://docs.docker.com/desktop/install/windows-install/)
-  - Linux: [Instalar Docker Engine](https://docs.docker.com/engine/install/)
-  - macOS: [Descargar Docker Desktop](https://docs.docker.com/desktop/install/mac-install/)
-- **Python 3.9 o superior**
-- **Git**
-
-### 2. Instalación
-
 ```bash
-# Clonar repositorio
 git clone https://github.com/AlexFT257/BCNExtractor.git
 cd BCNExtractor
 
-# Iniciar PostgreSQL
+# Configurar credenciales
+cp .env.example .env
+
+# Levantar PostgreSQL
 docker-compose up -d
 
 # Instalar dependencias
 pip install -r requirements.txt
-
-# Configurar .env
-cp .env.example .env
-# Editar .env con tus credenciales
 ```
 
-### 3. Uso Básico
+Las credenciales por defecto en `.env.example` coinciden con las del `docker-compose.yml`, por lo que el proyecto funciona sin editar el `.env` en desarrollo local.
+
+## Uso básico
 
 ```bash
-# Cargar instituciones
-python cli_instituciones.py load data/instituciones.csv
+# Inicializar la base de datos y cargar instituciones desde el CSV incluido
+python bcn_cli.py init
 
-# Listar normas de una institución
-python bcn_cli.py list 17
+# Listar normas de una institución (consulta directa a BCN)
+python bcn_cli.py list 17 --limit 10
 
-# Sincronizar a base de datos
-python bcn_cli.py sync 17 --limit 10
+# Sincronizar normas a la base de datos
+python bcn_cli.py sync 17 --limit 50
 
-# Buscar normas
+# Buscar en la base de datos local
 python bcn_cli.py search "medio ambiente"
 
 # Ver estadísticas
 python bcn_cli.py stats
+
+# Gestionar instituciones
+python institution_cli.py load data/instituciones.csv
 ```
 
-## Documentación
+La API REST se levanta con:
 
-- [Guía de Uso](docs/USAGE.md)
-- [Arquitectura](docs/ARCHITECTURE.md)
-- [API de la BCN](docs/API_BCN.md)
-- [Rendimiento](docs/PERFORMANCE.md)
+```bash
+uvicorn api:app --reload
+```
 
-FastAPI genera automáticamente documentación:
+Swagger UI disponible en `http://localhost:8000/docs`.
 
-- **Swagger UI**: `http://localhost:8000/docs`
-- **ReDoc**: `http://localhost:8000/redoc`
-- **OpenAPI**: `http://localhost:8000/openapi.json`
+## Arquitectura
 
-## 📁 Estructura del Proyecto
+```
+BCN (web service)
+      |
+      v
+BCNClient (bcn_client.py)       — HTTP, caché, reintentos, rate limiting
+      |
+      v
+BCNXMLParser (utils/norm_parser.py) — lxml, extracción de metadatos, conversión a Markdown
+      |
+      v
+Managers (managers/)            — NormsManager, InstitutionManager, TiposNormasManager
+      |
+      v
+PostgreSQL (Docker)             — FTS en español, índices GIN, hash MD5 para detección de cambios
+
+Interfaces: CLI (bcn_cli.py) · REST API (api.py) · Web UI (en roadmap)
+```
+
+## Estado del proyecto
+
+| Fase | Descripción | Estado |
+|------|-------------|--------|
+| 1 — MVP | CLI, extracción, almacenamiento, Docker | Completada |
+| 2 — Optimización | Caché, rate limiting, reintentos, benchmarks | Completada |
+| 3 — API | FastAPI, OpenAPI, búsqueda avanzada | En desarrollo |
+| 4 — Frontend | Web UI, dashboard, visualización de relaciones | Pendiente |
+
+## Estructura del proyecto
 
 ```
 BCNExtractor/
-│
-├── docker-compose.yml          # Configuración Docker
-├── requirements.txt            # Dependencias Python
-├── .env.example                # Plantilla variables de entorno
-├── README.md                   # Este archivo
-│
-├── bcn_client.py               # Cliente para la API de la BCN
-├── bcn_cli.py                  # CLI para manejar la aplicación
-├── institution_cli.py          # CLI para manejar instituciones
-│
-├── api.py                      # App de Fast API
-├── test_api.py                 # Test de la API
-│
-├── loaders/                        # Clases para cargar datos desde archivos
-│   └── institutions.py
-│
-├── managers/                       # Clases para manejar datos en la base de datos
+├── bcn_client.py           # Cliente HTTP para la BCN
+├── bcn_cli.py              # CLI principal
+├── institution_cli.py      # CLI para gestión de instituciones
+├── api.py                  # API REST (FastAPI)
+├── docker-compose.yml
+├── requirements.txt
+├── .env.example
+├── managers/
 │   ├── institutions.py
 │   ├── norms.py
 │   └── norms_types.py
-│
-├── utils/                          # Parsers, loggers y utils 
-│   ├── db_logger.py
-│   └── norm_parser.py              # Parser de normas (xml y md)
-│
-├── data/
-│   ├── xml/                        # XMLs y schemas descargados (backup)
-│   ├── logs/                       # Archivos de log
-│   ├── cache/                      # Cache de datos
-│   ├── sample/                     # Ejemplos de respuesta del web service de la BCN
-│   ├── extractor_instituciones.py  # Util para extraer instituciones del html
-│   └── instituciones.csv           # Instituciones de la BCN (backup)
-│   └── bcn_schema.xml              # Schema del xml de la BCN
-│
-├── tests/                          # [WIP]
-│   ├── test_connection.py
-│   └── test_performance.py
-│
-└── docs/
-    ├── API_BCN.md              # Documentación servicios BCN
-    └── DATABASE_SCHEMA.md      # Esquema de base de datos 
-    └── USAGE.md                # Guia de uso y endpoints
-    └── ARCHITECTURE.md         # Arquitectura del proyecto
+├── loaders/
+│   └── institutions.py
+├── utils/
+│   ├── norm_parser.py
+│   └── db_logger.py
+└── data/
+    ├── instituciones.csv
+    └── xml/
 ```
 
-## Base de Datos
+## Licencia
 
-### Esquema Principal
-
-```sql
--- Tipos de normas (catálogo)
-tipos_normas (
-  id SERIAL PRIMARY KEY,
-  nombre TEXT NOT NULL UNIQUE,
-  abreviatura TEXT,
-  fecha_creacion TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  fecha_actualizacion TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-)
-
--- Instituciones
-instituciones (
-  id INTEGER PRIMARY KEY,              -- ID propio de la BCN
-  nombre TEXT NOT NULL,
-  fecha_agregada TIMESTAMP,
-  fecha_actualizada TIMESTAMP
-)
-
--- Normas (tabla central)
-normas (
-  id INTEGER PRIMARY KEY,              -- ID propio de la BCN
-  id_tipo INTEGER REFERENCES tipos_normas(id),
-  numero VARCHAR(50),
-  titulo TEXT,                          -- índice GIN para full-text search
-  estado VARCHAR(20) DEFAULT 'vigente', -- 'vigente' | 'derogada'
-  fecha_publicacion DATE,
-  fecha_promulgacion DATE,
-  organismo TEXT,
-  xml_path TEXT,                        -- respaldo XML en disco
-  md_path TEXT,                         -- Markdown generado en disco
-  contenido_texto TEXT,
-  metadata_json JSONB,                  -- materias, organismos, flags
-  hash_xml VARCHAR(32),                 -- MD5 para detectar cambios
-  fecha_descarga TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  fecha_actualizacion TIMESTAMP
-)
-
--- Relación muchos-a-muchos normas ↔ instituciones
-normas_instituciones (
-  id_norma INTEGER REFERENCES normas(id),
-  id_institucion INTEGER REFERENCES instituciones(id),
-  fecha_asociacion TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  PRIMARY KEY (id_norma, id_institucion)
-)
-
--- Log de operaciones de descarga/sincronización
-descargas (
-  id SERIAL PRIMARY KEY,
-  id_norma INTEGER REFERENCES normas(id),
-  tipo_descarga VARCHAR(50),           -- 'descarga' | 'sincronizacion'
-  estado VARCHAR(50),                  -- 'exitosa' | 'error'
-  fecha_intento TIMESTAMP,
-  error_mensaje TEXT
-)
-```
-
-### Índices y Optimizaciones
-
-- **Full-text search** en `titulo` mediante índice GIN sobre `to_tsvector('spanish', titulo)`
-- **Índices B-tree** en `normas.id_tipo`, `normas.estado` y `tipos_normas.nombre`
-- **Índice GIN** disponible sobre `metadata_json` para consultas por claves JSONB
-- **Detección de cambios** mediante hash MD5 del XML: evita upserts innecesarios en sincronizaciones masivas
-
-## Roadmap
-
-### Fase 1: MVP (Versión 1.0)
-- [x] Extracción de instituciones
-- [x] Descarga de normas por institución
-- [x] Almacenamiento en PostgreSQL
-- [x] CLI básica
-- [x] Docker setup
-
-### Fase 2: Optimización (Versión 1.1)
-- [x] Sistema de caché para reducir requests
-- [x] Rate limiting configurable
-- [x] Reintentos automáticos en fallos
-- [x] Benchmarking
-- [x] Métricas de performance
-
-### Fase 3: API (Versión 2.0)
-- [x] API REST con FastAPI
-- [x] Test de la API
-- [x] Endpoints de búsqueda avanzada
-- [x] Documentación OpenAPI
-
-### Fase 4: Frontend (Versión 3.0)
-- [ ] Interfaz web de búsqueda
-- [ ] Interfaz web de documentación
-- [ ] Dashboard de estadísticas
-- [ ] Visualización de relaciones entre normas
-
-
-## 📄 Licencia
-
-Este proyecto está licenciado bajo **Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International (CC BY-NC-SA 4.0)**.
-
-### Esto significa que puedes:
-
-- ✅ **Compartir**: Copiar y redistribuir el material en cualquier medio o formato
-- ✅ **Adaptar**: Remezclar, transformar y construir sobre el material
-
-### Bajo las siguientes condiciones:
-
-- **Atribución**: Debes dar crédito apropiado, proporcionar un enlace a la licencia e indicar si se realizaron cambios
-- **No Comercial**: No puedes usar el material con fines comerciales
-- **Compartir Igual**: Si remezclas, transformas o construyes sobre el material, debes distribuir tus contribuciones bajo la misma licencia
-
-Para uso comercial, por favor contacta a [ftb2570@gmail.com](mailto:ftb2570@gmail.com).
+[CC BY-NC-SA 4.0](https://creativecommons.org/licenses/by-nc-sa/4.0/) — uso no comercial, con atribución y compartir igual. Para uso comercial: [ftb2570@gmail.com](mailto:ftb2570@gmail.com).

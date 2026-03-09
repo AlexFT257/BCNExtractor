@@ -49,7 +49,9 @@ class InstitutionLoader:
         cursor.close()
         print(f"Tabla {self.table_name} creada/validada")
 
-    def load_from_csv(self, csv_path: str, mode: str = "append") -> Dict:
+    def load_from_csv(
+        self, csv_path: str = "/data/instituciones.csv", mode: str = "append"
+    ) -> Dict:
         """
         mode:
             - update: Actualiza datos existentes, agregando nuevas
@@ -162,8 +164,7 @@ class InstitutionLoader:
             existing_ids = {row[0] for row in cursor.fetchall()}
 
             data = [
-                (inst["id"], inst["nombre"], datetime.now())
-                for inst in instituciones
+                (inst["id"], inst["nombre"], datetime.now()) for inst in instituciones
             ]
 
             execute_batch(cursor, upsert_query, data)
@@ -199,8 +200,7 @@ class InstitutionLoader:
 
         try:
             data = [
-                (inst["id"], inst["nombre"], datetime.now())
-                for inst in instituciones
+                (inst["id"], inst["nombre"], datetime.now()) for inst in instituciones
             ]
 
             execute_batch(cursor, insert_query, data)
