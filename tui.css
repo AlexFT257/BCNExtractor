@@ -1,0 +1,229 @@
+Screen {
+    background: #0d0f14;
+    color: #c8d0e8;
+}
+Header {
+    background: #141720;
+    color: #4f7cff;
+    border-bottom: tall #2a3050;
+}
+Footer {
+    background: #4f7cff;
+    color: white;
+}
+
+#main-layout {
+    layout: horizontal;
+    height: 1fr;
+}
+
+#sidebar {
+    width: 30;
+    background: #141720;
+    border-right: tall #2a3050;
+}
+#sidebar-header {
+    background: #1a1e2e;
+    color: #5a6380;
+    text-style: bold;
+    padding: 0 1;
+    height: 2;
+    border-bottom: tall #2a3050;
+    content-align: left middle;
+}
+#inst-search {
+    border: tall #2a3050;
+    background: #1a1e2e;
+    color: #c8d0e8;
+    margin: 1 1 0 1;
+    height: 3;
+}
+#inst-search:focus {
+    border: tall #4f7cff;
+}
+#inst-list {
+    height: 1fr;
+    background: #141720;
+    border: none;
+    padding: 0;
+}
+#inst-list > ListItem {
+    background: #141720;
+    padding: 0 1;
+    border-left: thick #141720;
+    height: 2;
+}
+#inst-list > ListItem:hover {
+    background: #1a1e2e;
+    border-left: thick #2a3050;
+}
+#inst-list > ListItem.--highlight {
+    background: #1e2a4a;
+    border-left: thick #4f7cff;
+    color: white;
+}
+
+#content-area {
+    width: 1fr;
+    background: #0d0f14;
+}
+#content-header {
+    background: #141720;
+    border-bottom: tall #2a3050;
+    padding: 0 2;
+    height: 4;
+    layout: horizontal;
+}
+#inst-label {
+    color: white;
+    text-style: bold;
+    width: 1fr;
+    content-align: left middle;
+}
+#header-btns {
+    layout: horizontal;
+    align: right middle;
+    width: auto;
+}
+
+Button {
+    margin-left: 1;
+    min-width: 16;
+    height: 3;
+}
+Button.primary {
+    background: #4f7cff;
+    color: white;
+    border: none;
+}
+Button.ghost {
+    background: #1a1e2e;
+    color: #5a6380;
+    border: tall #2a3050;
+}
+Button:hover {
+    background: #4f7cff;
+    color: white;
+}
+
+DataTable {
+    height: 1fr;
+    background: #0d0f14;
+    color: #c8d0e8;
+    border: none;
+}
+DataTable > .datatable--header {
+    background: #1a1e2e;
+    color: #5a6380;
+    text-style: bold;
+}
+DataTable > .datatable--cursor {
+    background: #1e2a4a;
+    color: white;
+}
+DataTable > .datatable--hover {
+    background: #141720;
+}
+
+#detail-panel {
+    width: 36;
+    background: #141720;
+    border-left: tall #2a3050;
+}
+#detail-header-label {
+    background: #1a1e2e;
+    color: #5a6380;
+    text-style: bold;
+    padding: 0 1;
+    height: 2;
+    border-bottom: tall #2a3050;
+    content-align: left middle;
+}
+#detail-scroll {
+    height: 1fr;
+    padding: 1 2;
+}
+#detail-actions {
+    height: auto;
+    border-top: tall #2a3050;
+    padding: 1 2;
+    layout: vertical;
+}
+#detail-actions Button {
+    margin: 0 0 1 0;
+    width: 100%;
+    min-width: 0;
+}
+
+#dashboard-content {
+    padding: 1 2;
+    height: 1fr;
+    overflow-y: auto;
+}
+#logs-content {
+    padding: 1 2;
+    height: 1fr;
+}
+#log-widget {
+    height: 1fr;
+    background: #0d0f14;
+    border: tall #2a3050;
+}
+
+SyncModal {
+    align: center middle;
+}
+#sync-dialog {
+    background: #141720;
+    border: thick #4f7cff;
+    padding: 2 3;
+    width: 64;
+    height: 24;
+}
+#sync-title {
+    text-style: bold;
+    color: white;
+    margin-bottom: 1;
+}
+#sync-sub {
+    color: #5a6380;
+    margin-bottom: 1;
+}
+#sync-progress {
+    margin-bottom: 1;
+}
+#sync-log {
+    height: 8;
+    background: #0d0f14;
+    border: tall #2a3050;
+    margin-bottom: 1;
+}
+
+ReaderModal {
+    align: center middle;
+}
+#reader-dialog {
+    background: #141720;
+    border: thick #00d4aa;
+    padding: 1 2;
+    width: 92;
+    height: 42;
+}
+#reader-title {
+    color: white;
+    text-style: bold;
+    margin-bottom: 1;
+    border-bottom: tall #2a3050;
+    padding-bottom: 1;
+}
+#reader-scroll {
+    height: 1fr;
+    background: #0d0f14;
+    border: tall #2a3050;
+    padding: 1 2;
+    margin-bottom: 1;
+}
+#reader-btns {
+    layout: horizontal;
+    height: auto;
+}

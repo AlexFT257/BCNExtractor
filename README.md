@@ -41,6 +41,28 @@ Las credenciales por defecto en `.env.example` coinciden con las del `docker-com
 
 ## Uso básico
 
+### TUI (interfaz de terminal)
+
+La forma más cómoda de usar el proyecto. Requiere `textual`:
+
+```bash
+pip install textual
+python bcn_tui.py
+```
+
+| Tecla | Acción |
+|-------|--------|
+| `1` / `2` / `3` | Cambiar entre Normas, Dashboard y Logs |
+| `/` | Filtrar instituciones |
+| `s` | Sincronizar institución seleccionada |
+| `r` | Leer texto completo de la norma seleccionada |
+| `Esc` | Cerrar modal / cancelar sync |
+| `q` | Salir |
+
+El sync descarga las normas de la institución activa, las procesa y las guarda en la base de datos. Al terminar muestra un resumen y habilita el botón Cerrar.
+
+### CLI
+
 ```bash
 # Inicializar la base de datos y cargar instituciones desde el CSV incluido
 python bcn_cli.py init
@@ -61,7 +83,7 @@ python bcn_cli.py stats
 python institution_cli.py load data/instituciones.csv
 ```
 
-La API REST se levanta con:
+### API REST
 
 ```bash
 uvicorn api:app --reload
@@ -86,7 +108,7 @@ Managers (managers/)            — NormsManager, InstitutionManager, TiposNorma
       v
 PostgreSQL (Docker)             — FTS en español, índices GIN, hash MD5 para detección de cambios
 
-Interfaces: CLI (bcn_cli.py) · REST API (api.py) · Web UI (en roadmap)
+Interfaces: TUI (bcn_tui.py) · CLI (bcn_cli.py) · REST API (api.py)
 ```
 
 ## Estado del proyecto
@@ -95,14 +117,16 @@ Interfaces: CLI (bcn_cli.py) · REST API (api.py) · Web UI (en roadmap)
 |------|-------------|--------|
 | 1 — MVP | CLI, extracción, almacenamiento, Docker | Completada |
 | 2 — Optimización | Caché, rate limiting, reintentos, benchmarks | Completada |
-| 3 — API | FastAPI, OpenAPI, búsqueda avanzada | En desarrollo |
-| 4 — Frontend | Web UI, dashboard, visualización de relaciones | Pendiente |
+| 3 — TUI | Interfaz de terminal, sync interactivo, lector de normas | Completada |
+| 4 — API | FastAPI, OpenAPI, búsqueda avanzada | En desarrollo |
+| 5 — Frontend | Web UI, visualización de relaciones | Pendiente |
 
 ## Estructura del proyecto
 
 ```
 BCNExtractor/
 ├── bcn_client.py           # Cliente HTTP para la BCN
+├── bcn_tui.py              # TUI (interfaz de terminal)
 ├── bcn_cli.py              # CLI principal
 ├── institution_cli.py      # CLI para gestión de instituciones
 ├── api.py                  # API REST (FastAPI)

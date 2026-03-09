@@ -12,10 +12,13 @@ load_dotenv()
 
 
 class NormsManager:
-    """Gestiona el CRUD de normas en PostgreSQL"""
+    """Gestiona el CRUD de normas en PostgreSQL."""
 
     def __init__(
-        self, xml_dir: str = "data/xml", md_dir: str = "data/md", db_connection=None
+        self,
+        xml_dir: str = "data/xml",
+        md_dir: str = "data/md",
+        db_connection=None,
     ):
         self.xml_dir = Path(xml_dir)
         self.xml_dir.mkdir(parents=True, exist_ok=True)
@@ -34,17 +37,16 @@ class NormsManager:
 
     def _create_connection(self):
         return psycopg2.connect(
-            host="localhost",
+            host=os.getenv("POSTGRES_HOST", "localhost"),
             port=os.getenv("POSTGRES_PORT", 5432),
             database=os.getenv("POSTGRES_DB", "bcn_normas"),
             user=os.getenv("POSTGRES_USER", "bcn_user"),
-            password=os.getenv("POSTGRES_PASSWORD", "changeme"),
+            password=os.getenv("POSTGRES_PASSWORD", "bcn_password"),
         )
 
     def _ensure_table(self):
         cursor = self.conn.cursor()
 
-        # Tabla normas
         cursor.execute("""
             CREATE TABLE IF NOT EXISTS normas (
                 id INTEGER PRIMARY KEY,
@@ -55,12 +57,10 @@ class NormsManager:
                 fecha_publicacion DATE,
                 fecha_promulgacion DATE,
                 organismo TEXT,
-
                 xml_path TEXT,
                 md_path TEXT,
                 contenido_texto TEXT,
                 metadata_json JSONB,
-
                 hash_xml VARCHAR(32),
                 fecha_descarga TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 fecha_actualizacion TIMESTAMP
@@ -72,7 +72,6 @@ class NormsManager:
                 ON normas USING gin(to_tsvector('spanish', titulo));
         """)
 
-        # Tabla relación normas-instituciones
         cursor.execute("""
             CREATE TABLE IF NOT EXISTS normas_instituciones (
                 id_norma INTEGER,
@@ -86,7 +85,6 @@ class NormsManager:
 
         self.conn.commit()
         cursor.close()
-        # print("Tablas de normas creadas/validadas")
 
     def save(
         self,
@@ -99,33 +97,27 @@ class NormsManager:
         force: bool = False,
     ) -> str:
         """
-        Returns:
-            'nueva', 'actualizada', 'sin_cambios'
+        Guarda o actualiza una norma.
+        Returns: 'nueva' | 'actualizada' | 'sin_cambios'
         """
-        # Hash para detectar cambios
         hash_xml = hashlib.md5(xml_content.encode()).hexdigest()
 
-        # Verificar si existe
         cursor = self.conn.cursor()
         cursor.execute("SELECT hash_xml FROM normas WHERE id = %s", (id_norma,))
         existing = cursor.fetchone()
 
-        # Sin cambios
         if existing and existing[0] == hash_xml and not force:
             cursor.close()
             return "sin_cambios"
 
-        # Guardar XML
         xml_path = self.xml_dir / f"{id_norma}.xml"
         xml_path.write_text(xml_content, encoding="utf-8")
 
-        # Guardar Markdown si existe
         md_path = None
         if markdown:
             md_path = self.md_dir / f"{id_norma}.md"
             md_path.write_text(markdown, encoding="utf-8")
 
-        # Metadata
         metadata = {
             "materias": parsed_data.get("materias", []),
             "organismos": parsed_data.get("organismos", []),
@@ -133,7 +125,6 @@ class NormsManager:
             "es_tratado": parsed_data.get("es_tratado", False),
         }
 
-        # UPSERT
         cursor.execute(
             """
             INSERT INTO normas (
@@ -176,7 +167,6 @@ class NormsManager:
             ),
         )
 
-        # Asociar con institución
         if id_institucion:
             cursor.execute(
                 """
@@ -193,37 +183,87 @@ class NormsManager:
         return "actualizada" if existing else "nueva"
 
     def get_by_id(self, id_norma: int) -> Optional[Dict]:
-        """Obtiene una norma por ID"""
         cursor = self.conn.cursor()
         cursor.execute(
             """
-            SELECT id, id_tipo, numero, titulo, estado,
-                   fecha_publicacion, fecha_promulgacion, organismo,
-                   xml_path, md_path, metadata_json
-            FROM normas
-            WHERE id = %s
+            SELECT n.id, tn.nombre, n.numero, n.titulo, n.estado,
+                   n.fecha_publicacion, n.fecha_promulgacion, n.organismo,
+                   n.xml_path, n.md_path, n.metadata_json
+            FROM normas n
+            LEFT JOIN tipos_normas tn ON n.id_tipo = tn.id
+            WHERE n.id = %s
         """,
             (id_norma,),
         )
-
         row = cursor.fetchone()
+        if not row:
+            cursor.close()
+            return None
+
+        cursor.execute(
+            """
+            SELECT i.nombre FROM instituciones i
+            JOIN normas_instituciones ni ON i.id = ni.id_institucion
+            WHERE ni.id_norma = %s
+        """,
+            (id_norma,),
+        )
+        instituciones = [r[0] for r in cursor.fetchall()]
         cursor.close()
 
-        if row:
-            return {
+        raw = row[10]
+        if raw is None:
+            meta = {}
+        elif isinstance(raw, dict):
+            meta = raw
+        else:
+            meta = json.loads(raw)
+        return {
+            "id": row[0],
+            "tipo_nombre": row[1],
+            "numero": row[2],
+            "titulo": row[3],
+            "estado": row[4],
+            "fecha_publicacion": row[5],
+            "fecha_promulgacion": row[6],
+            "organismo": row[7],
+            "xml_path": row[8],
+            "md_path": row[9],
+            "metadata": meta,
+            "materias": meta.get("materias", []),
+            "instituciones": instituciones,
+        }
+
+    def get_by_institucion(self, id_institucion: int, limit: int = 500) -> List[Dict]:
+        """Devuelve todas las normas asociadas a una institución."""
+        cursor = self.conn.cursor()
+        cursor.execute(
+            """
+            SELECT n.id, tn.nombre, n.numero, n.titulo,
+                   n.fecha_publicacion, n.estado, n.md_path
+            FROM normas n
+            JOIN normas_instituciones ni ON n.id = ni.id_norma
+            LEFT JOIN tipos_normas tn ON n.id_tipo = tn.id
+            WHERE ni.id_institucion = %s
+            ORDER BY n.fecha_publicacion DESC NULLS LAST
+            LIMIT %s
+        """,
+            (id_institucion, limit),
+        )
+        rows = cursor.fetchall()
+        cursor.close()
+        return [
+            {
                 "id": row[0],
-                "id_tipo": row[1],
-                "numero": row[2],
-                "titulo": row[3],
-                "estado": row[4],
-                "fecha_publicacion": row[5],
-                "fecha_promulgacion": row[6],
-                "organismo": row[7],
-                "xml_path": row[8],
-                "md_path": row[9],
-                "metadata": json.loads(row[10]) if row[10] else {},
+                "tipo_nombre": row[1] or "—",
+                "numero": row[2] or "—",
+                "titulo": row[3] or "",
+                "fecha_publicacion": row[4],
+                "estado": row[5] or "vigente",
+                "md_path": row[6],
             }
-        return None
+            for row in rows
+        ]
 
     def search(self, query: str, limit: int = 20) -> List[Dict]:
         """Búsqueda full-text en normas."""
@@ -252,6 +292,7 @@ class NormsManager:
             for row in cursor.fetchall()
         ]
 
+        # Enriquecer con nombre del tipo
         if results:
             cursor.execute("SELECT id, nombre FROM tipos_normas")
             types = {row[0]: row[1] for row in cursor.fetchall()}

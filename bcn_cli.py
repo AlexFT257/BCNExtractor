@@ -364,7 +364,7 @@ def stats_command(args):
             print(f"  {estado:<14} {count}")
 
         if args.errors:
-            errors = logger.get_recent_errors(limit=5)
+            errors = logger.get_recent(days=7, estado="error", limit=5)
             if errors:
                 print(f"\nErrores recientes:")
                 for err in errors:
