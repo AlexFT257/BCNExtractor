@@ -1,10 +1,11 @@
 import pytest
-from bcn_cli import BCNClient
-from utils.norm_parser import BCNXMLParser
-from managers.norms import NormsManager
 
+from bcn_cli import BCNClient
+from managers.norms import NormsManager
+from utils.norm_parser import BCNXMLParser
 
 # ==================== FIXTURES ====================
+
 
 @pytest.fixture(scope="module")
 def client():
@@ -37,6 +38,7 @@ def sample_xml(client):
 
 # ==================== BENCHMARKS ====================
 
+
 def test_benchmark_api_list_normas(benchmark, client):
     """Benchmark: Listar normas de institución"""
     result = benchmark(client.get_normas_por_institucion, 17)
@@ -60,7 +62,7 @@ def test_benchmark_parse_xml(benchmark, parser, sample_xml):
     """Benchmark: Parsear XML a Markdown"""
     if not sample_xml:
         pytest.skip("No hay XML de muestra")
-    
+
     markdown, metadata = benchmark(parser.parse_from_string, sample_xml)
     assert markdown is not None
     assert metadata is not None
@@ -76,7 +78,7 @@ def test_benchmark_db_get_stats(benchmark, norms_manager):
     """Benchmark: Obtener estadísticas"""
     stats = benchmark(norms_manager.get_stats)
     assert stats is not None
-    assert 'total' in stats
+    assert "total" in stats
 
 
 def test_benchmark_db_get_norm(benchmark, norms_manager):

@@ -8,6 +8,8 @@ import psycopg2
 from dotenv import load_dotenv
 from psycopg2.extras import execute_batch
 
+from managers.institutions import InstitutionManager
+
 load_dotenv()
 
 
@@ -30,24 +32,7 @@ class InstitutionLoader:
             )
             self.own_connection = True
 
-    def ensure_institution_table(self) -> None:
-        cursor = self.conn.cursor()
-
-        cursor.execute(f"""
-            CREATE TABLE IF NOT EXISTS {self.table_name} (
-                id INTEGER PRIMARY KEY,
-                nombre TEXT NOT NULL,
-                fecha_agregada TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                fecha_actualizada TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-            );
-
-            CREATE INDEX IF NOT EXISTS idx_instituciones_nombre
-                ON {self.table_name}(nombre);
-        """)
-
-        self.conn.commit()
-        cursor.close()
-        print(f"Tabla {self.table_name} creada/validada")
+        self.inst_manager = InstitutionManager()
 
     def load_from_csv(
         self, csv_path: str = "/data/instituciones.csv", mode: str = "append"
