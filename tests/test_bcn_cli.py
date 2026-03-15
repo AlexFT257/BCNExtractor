@@ -8,10 +8,6 @@ test_query = "minis"
 
 
 def make_args(**kwargs):
-    """
-    Los comandos del CLI esperan un argparse.Namespace, no un dict ni una list.
-    Este helper crea uno con valores por defecto seguros — solo pasas lo que cambia.
-    """
     defaults = {
         "institucion": test_inst_id,
         "limit": None,

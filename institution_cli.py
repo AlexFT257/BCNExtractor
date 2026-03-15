@@ -50,7 +50,7 @@ def list_command(args):
         print(f"\tTotal:{len(instituciones)}")
 
         for institucion in instituciones:
-            print(f"\t{institucion['id']} - {institucion['nombre']}")
+            print(f"\t{institucion.id} - {institucion.nombre}")
 
         print("\n" + "-" * 50)
 
@@ -78,8 +78,8 @@ def get_command(args):
             return 1
 
         print("Institución:")
-        print(f"\tID: {institucion['id']}")
-        print(f"\tNombre: {institucion['nombre']}")
+        print(f"\tID: {institucion.id}")
+        print(f"\tNombre: {institucion.nombre}")
         print("\n" + "-" * 50)
 
         return 0
