@@ -302,7 +302,7 @@ class NormsManager:
         cursor.close()
         return results
 
-    def get_by__pub_date(self, date:date, limit:int=100, offset:int = 0) -> List[Dict]:
+    def get_by_pub_date(self, date:date, limit:int=100, offset:int = 0) -> List[Dict]:
         cursor = self.conn.cursor()
         norms = []
         

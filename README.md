@@ -136,7 +136,8 @@ BCNExtractor/
 ├── managers/
 │   ├── institutions.py
 │   ├── norms.py
-│   └── norms_types.py
+│   ├── norms_types.py
+│   └── downloads.py
 ├── loaders/
 │   └── institutions.py
 ├── utils/
