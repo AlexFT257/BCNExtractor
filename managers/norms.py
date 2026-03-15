@@ -398,7 +398,24 @@ class NormsManager:
                 "estado": row[4],
                 "fecha_publicacion": row[5],
             })
+            
+    def get_all(self, limit:int=100, offset:int=0) -> List[Dict]:
+        cursor = self.conn.cursor()
+        norms = []
         
+        cursor.execute("SELECT * FROM normas LIMIT %s OFFSET %s", (limit, offset))
+        for row in cursor.fetchall():
+            norms.append({
+                "norma_id": row[0],
+                "tipo_id": row[1],
+                "titulo": row[2],
+                "numero": row[3],
+                "estado": row[4],
+                "fecha_publicacion": row[5],
+            })
+        
+        cursor.close()
+        return norms
         
     def get_stats(self) -> Dict:
         """Estadísticas de normas."""
