@@ -10,10 +10,10 @@ from pathlib import Path
 
 from bcn_client import BCNClient
 from loaders.institutions import InstitutionLoader
+from managers.downloads import DownloadManager
 from managers.institutions import InstitutionManager
 from managers.norms import NormsManager
 from managers.norms_types import TiposNormasManager
-from managers.downloads import DownloadManager
 from utils.norm_parser import BCNXMLParser
 
 
@@ -43,8 +43,6 @@ def init_managers():
     try:
         conn = _create_connection()
         inst_loader = InstitutionLoader(db_connection=conn)
-        inst_loader.ensure_institution_table()
-
         tipos_mgr = TiposNormasManager(db_connection=conn)
         norms_mgr = NormsManager(db_connection=conn)
         inst_mgr = InstitutionManager(db_connection=conn)
@@ -63,7 +61,7 @@ def init_managers():
         return None
 
 
-def init_db(args):
+def init_db(args=None):
     """Inicializa el esquema de la base de datos y carga las instituciones."""
     print("\n── Inicializando Base de Datos ──")
     managers = init_managers()
@@ -73,7 +71,7 @@ def init_db(args):
     # Cargar instituciones desde el CSV incluido en el repo
     csv_path = (
         Path(args.csv)
-        if hasattr(args, "csv") and args.csv
+        if args and hasattr(args, "csv") and args.csv
         else Path("data/instituciones.csv")
     )
     if csv_path.exists():
@@ -322,9 +320,11 @@ def sync_command(args):
         norms_mgr.close()
 
 
-def stats_command(args):
+def stats_command(args, managers=None):
     """Muestra estadísticas del sistema"""
-    managers = init_managers()
+    own_connection = managers is None
+    if managers is None:
+        managers = init_managers()
     if not managers:
         return 1
 
@@ -377,12 +377,16 @@ def stats_command(args):
         print(f"✗ Error: {e}")
         return 1
     finally:
-        managers["conn"].close()
+        if own_connection:
+            managers["conn"].close()
 
 
-def search_command(args):
+def search_command(args, managers=None):
     """Busca normas en la base de datos"""
-    norms_mgr = NormsManager()
+    # Acepta managers externos (util para tests de integracion)
+    # Si no se pasan, crea su propia conexion como siempre
+    own_connection = managers is None
+    norms_mgr = managers["normas"] if managers else NormsManager()
 
     try:
         print(f"\nBuscando: '{args.query}'...\n")
@@ -411,7 +415,8 @@ def search_command(args):
         print(f"✗ Error: {e}")
         return 1
     finally:
-        norms_mgr.close()
+        if own_connection:
+            norms_mgr.close()
 
 
 def cache_command(args):

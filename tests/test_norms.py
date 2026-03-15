@@ -21,7 +21,7 @@ def test_get_by_id(id: int = test_norm_id):
     norm = norm_manager.get_by_id(id)
     # print(norm)
 
-    assert norm is None or isinstance(norm, Dict)
+    assert isinstance(norm, Dict)
     if isinstance(norm, Dict):
         assert norm.get("id") == id
 
