@@ -49,7 +49,7 @@ def _init_managers(conn=None):
     from managers.institutions import InstitutionManager
     from managers.norms import NormsManager
     from managers.norms_types import TiposNormasManager
-    from utils.db_logger import DBLogger
+    from managers.downloads import DownloadManager
 
     load_dotenv()
 
@@ -67,7 +67,7 @@ def _init_managers(conn=None):
         "normas": NormsManager(db_connection=conn),
         "tipos": TiposNormasManager(db_connection=conn),
         "instituciones": InstitutionManager(db_connection=conn),
-        "logger": DBLogger(db_connection=conn),
+        "logger": DownloadManager(db_connection=conn),
     }
 
 
@@ -113,7 +113,7 @@ class ReaderModal(ModalScreen):
 class SyncModal(ModalScreen):
     """
     Sincroniza normas de una institucion en un thread separado.
-    Usa BCNClient, BCNXMLParser, NormsManager, TiposNormasManager y DBLogger
+    Usa BCNClient, BCNXMLParser, NormsManager, TiposNormasManager y DownloadManager
     exactamente igual que bcn_cli.py sync.
     """
 
@@ -475,7 +475,7 @@ class BCNApp(App):
     # ── DASHBOARD ────────────────────────────────────────────────────────────
 
     def _load_dashboard(self) -> None:
-        """Usa get_stats() de NormsManager, InstitutionManager y DBLogger."""
+        """Usa get_stats() de NormsManager, InstitutionManager y DownloadManager."""
         try:
             mgrs = _init_managers()
             ns = mgrs["normas"].get_stats()

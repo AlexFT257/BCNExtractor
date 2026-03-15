@@ -2,7 +2,7 @@ from typing import Dict, List, Optional, Union
 from fastapi import FastAPI
 from bcn_client import BCNClient
 from utils.norm_parser import BCNXMLParser
-from utils.db_logger import DBLogger
+from managers.downloads import DownloadManager
 from managers.norms import NormsManager
 from managers.institutions import InstitutionManager
 from managers.norms_types import TiposNormasManager
@@ -15,7 +15,7 @@ parser = BCNXMLParser()
 norm_manager = NormsManager()
 institution_manager = InstitutionManager()
 tipos_normas_manager = TiposNormasManager()
-logger = DBLogger()
+logger = DownloadManager()
 
 
         

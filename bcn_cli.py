@@ -13,7 +13,7 @@ from loaders.institutions import InstitutionLoader
 from managers.institutions import InstitutionManager
 from managers.norms import NormsManager
 from managers.norms_types import TiposNormasManager
-from utils.db_logger import DBLogger
+from managers.downloads import DownloadManager
 from utils.norm_parser import BCNXMLParser
 
 
@@ -48,7 +48,7 @@ def init_managers():
         tipos_mgr = TiposNormasManager(db_connection=conn)
         norms_mgr = NormsManager(db_connection=conn)
         inst_mgr = InstitutionManager(db_connection=conn)
-        logger = DBLogger(db_connection=conn)
+        logger = DownloadManager(db_connection=conn)
 
         return {
             "conn": conn,
