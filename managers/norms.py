@@ -3,6 +3,7 @@ import json
 import os
 from datetime import date, datetime
 from pathlib import Path
+from tracemalloc import start
 from typing import Dict, List, Literal, Optional
 
 import psycopg2
@@ -234,7 +235,9 @@ class NormsManager:
             "instituciones": instituciones,
         }
 
-    def get_by_institucion(self, id_institucion: int, limit: int = 500, offset: int = 0) -> List[Dict]:
+    def get_by_institucion(
+        self, id_institucion: int, limit: int = 500, offset: int = 0
+    ) -> List[Dict]:
         """Devuelve todas las normas asociadas a una institución."""
         cursor = self.conn.cursor()
         cursor.execute(
@@ -302,121 +305,157 @@ class NormsManager:
         cursor.close()
         return results
 
-    def get_by_pub_date(self, date:date, limit:int=100, offset:int = 0) -> List[Dict]:
+    def get_by_range_date(
+        self,
+        start_date: date,
+        end_date: date=date.today(),
+        date_type: Literal["pub", "prom"] = "pub",
+        limit: int = 100,
+        offset: int = 0,
+    ) -> List[Dict]:
         cursor = self.conn.cursor()
         norms = []
         
-        cursor.execute("SELECT * FROM normas WHERE fecha_publicacion = %s LIMIT %s OFFSET %s", (date, limit, offset))
-        for row in cursor.fetchall():
-            norms.append({
-                "norma_id": row[0],
-                "tipo_id": row[1],
-                "titulo": row[2],
-                "numero": row[3],
-                "estado": row[4],
-                "fecha_publicacion": row[5],
-            })
-        
-        cursor.close()
-        return norms
-        
-    def get_by_prom_date(self, date:date,limit:int=100, offset:int=0)->List[Dict]:
-        cursor = self.conn.cursor()
-        norms = []
-        
-        cursor.execute("SELECT * FROM normas WHERE fecha_promulgacion = %s LIMIT %s OFFSET %s", (date, limit, offset))
-        for row in cursor.fetchall():
-            norms.append({
-                "norma_id": row[0],
-                "tipo_id": row[1],
-                "titulo": row[2],
-                "numero": row[3],
-                "estado": row[4],
-                "fecha_promulgacion": row[5],
-            })
-        
-        cursor.close()
-        return norms
-    
-    def get_by_range_date(self, start_date:date, end_date:date, date_type:Literal["pub","prom"]="pub",  limit:int=100, offset:int=0)->List[Dict]:
-        cursor = self.conn.cursor()
-        norms = []
-        
+        # if not prived end
+        if not start_date:
+            raise ValueError("start_date must be provided")
+
         if date_type == "pub":
-            cursor.execute("SELECT * FROM normas WHERE fecha_publicacion BETWEEN %s AND %s LIMIT %s OFFSET %s", (start_date, end_date, limit, offset))
+            cursor.execute(
+                "SELECT * FROM normas WHERE fecha_publicacion BETWEEN %s AND %s LIMIT %s OFFSET %s",
+                (start_date, end_date, limit, offset),
+            )
         elif date_type == "prom":
-            cursor.execute("SELECT * FROM normas WHERE fecha_promulgacion BETWEEN %s AND %s LIMIT %s OFFSET %s", (start_date, end_date, limit, offset))
+            cursor.execute(
+                "SELECT * FROM normas WHERE fecha_promulgacion BETWEEN %s AND %s LIMIT %s OFFSET %s",
+                (start_date, end_date, limit, offset),
+            )
         else:
             raise ValueError("date_type must be 'pub' or 'prom'")
-        
+
         for row in cursor.fetchall():
-            norms.append({
-                "norma_id": row[0],
-                "tipo_id": row[1],
-                "titulo": row[2],
-                "numero": row[3],
-                "estado": row[4],
-                "fecha_promulgacion": row[5],
-            })
-        
+            norms.append(
+                {
+                    "norma_id": row[0],
+                    "tipo_id": row[1],
+                    "numero": row[2],
+                    "titulo": row[3],
+                    "estado": row[4],
+                    "fecha_publicacion": row[5],
+                    "fecha_promulgacion": row[6],
+                }
+            )
+
+        # Enriquecer con nombre del tipo
+        if norms:
+            cursor.execute("SELECT id, nombre FROM tipos_normas")
+            types = {row[0]: row[1] for row in cursor.fetchall()}
+            for result in norms:
+                result["tipo_nombre"] = types.get(result["tipo_id"], "—")
+
         cursor.close()
         return norms
-    
-    def get_by_status(self, status:str, limit:int=50, offset:int=0)->List[Dict]:
+
+    def get_by_status(
+        self, status: str, limit: int = 50, offset: int = 0
+    ) -> List[Dict]:
         cursor = self.conn.cursor()
         norms = []
-        
-        cursor.execute("SELECT * FROM normas WHERE estado = %s LIMIT %s OFFSET %s", (status, limit, offset))
+
+        cursor.execute(
+            "SELECT * FROM normas WHERE estado = %s LIMIT %s OFFSET %s",
+            (status, limit, offset),
+        )
         for row in cursor.fetchall():
-            norms.append({
-                "norma_id": row[0],
-                "tipo_id": row[1],
-                "titulo": row[2],
-                "numero": row[3],
-                "estado": row[4],
-                "fecha_publicacion": row[5],
-            })
-        
+            norms.append(
+                {
+                    "norma_id": row[0],
+                    "tipo_id": row[1],
+                    "numero": row[2],
+                    "titulo": row[3],
+                    "estado": row[4],
+                    "fecha_publicacion": row[5],
+                }
+            )
+
+        # Enriquecer con nombre del tipo
+        if norms:
+            cursor.execute("SELECT id, nombre FROM tipos_normas")
+            types = {row[0]: row[1] for row in cursor.fetchall()}
+            for result in norms:
+                result["tipo_nombre"] = types.get(result["tipo_id"], "—")
+
         cursor.close()
         return norms
-        
-    def get_by_type(self, type:str, limit:int=50, offset:int=0)-> List[Dict]:
+
+    def get_by_type(self, type: str, limit: int = 50, offset: int = 0) -> List[Dict]:
         cursor = self.conn.cursor()
         norms = []
-        
-        # find al types
-        cursor.execute("SELECT id FROM tipos_normas WHERE nombre = %s OR abreviatura = %s", (type, type))
-        type_id = cursor.fetchone()[0]
-        
-        cursor.execute("SELECT * FROM normas WHERE id_tipo = %s LIMIT %s OFFSET %s", (type_id, limit, offset))
+
+        # find all types that match the given name or abbreviation
+        cursor.execute(
+            "SELECT id FROM tipos_normas WHERE nombre ILIKE %s OR abreviatura ILIKE %s",
+            (f"%{type}%", f"%{type}%"),
+        )
+
+        type_ids = [row[0] for row in cursor.fetchall()]
+        if not type_ids:
+            return norms
+
+        # find all norms that match the type ids
+        cursor.execute(
+            "SELECT * FROM normas WHERE id_tipo IN %s LIMIT %s OFFSET %s",
+            (tuple(type_ids), limit, offset),
+        )
         for row in cursor.fetchall():
-            norms.append({
-                "norma_id": row[0],
-                "tipo_id": row[1],
-                "titulo": row[2],
-                "numero": row[3],
-                "estado": row[4],
-                "fecha_publicacion": row[5],
-            })
-            
-    def get_all(self, limit:int=100, offset:int=0) -> List[Dict]:
+            norms.append(
+                {
+                    "norma_id": row[0],
+                    "tipo_id": row[1],
+                    "numero": row[2],
+                    "titulo": row[3],
+                    "estado": row[4],
+                    "fecha_publicacion": row[5],
+                }
+            )
+
+        # Enriquecer con nombre del tipo
+        if norms:
+            cursor.execute("SELECT id, nombre FROM tipos_normas")
+            types = {row[0]: row[1] for row in cursor.fetchall()}
+            for result in norms:
+                result["tipo_nombre"] = types.get(result["tipo_id"], "—")
+
+        cursor.close()
+        return norms
+
+    def get_all(self, limit: int = 100, offset: int = 0) -> List[Dict]:
         cursor = self.conn.cursor()
         norms = []
-        
+
         cursor.execute("SELECT * FROM normas LIMIT %s OFFSET %s", (limit, offset))
         for row in cursor.fetchall():
-            norms.append({
-                "norma_id": row[0],
-                "tipo_id": row[1],
-                "titulo": row[2],
-                "numero": row[3],
-                "estado": row[4],
-                "fecha_publicacion": row[5],
-            })
-        
+            norms.append(
+                {
+                    "norma_id": row[0],
+                    "tipo_id": row[1],
+                    "numero": row[2],
+                    "titulo": row[3],
+                    "estado": row[4],
+                    "fecha_publicacion": row[5],
+                }
+            )
+
+        # Enriquecer con nombre del tipo
+        if norms:
+            cursor.execute("SELECT id, nombre FROM tipos_normas")
+            types = {row[0]: row[1] for row in cursor.fetchall()}
+            for result in norms:
+                result["tipo_nombre"] = types.get(result["tipo_id"], "—")
+
         cursor.close()
         return norms
-        
+
     def get_stats(self) -> Dict:
         """Estadísticas de normas."""
         cursor = self.conn.cursor()
