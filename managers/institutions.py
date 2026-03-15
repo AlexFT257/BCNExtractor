@@ -28,10 +28,9 @@ class InstitutionManager:
                 password=os.getenv("POSTGRES_PASSWORD", "changeme"),
             )
             self.own_connection = True
-        
+
         self.ensure_institution_table()
-            
-    
+
     def ensure_institution_table(self) -> None:
         cursor = self.conn.cursor()
 
@@ -98,7 +97,7 @@ class InstitutionManager:
         else:
             return None
 
-    def search(self, query: str) -> List[Institution]:
+    def search(self, query: str, limit: int = 20, offset: int = 0) -> List[Institution]:
         cursor = self.conn.cursor()
 
         cursor.execute(
@@ -107,8 +106,9 @@ class InstitutionManager:
             FROM {self.table_name}
             WHERE nombre ILIKE %s
             ORDER BY nombre
+            LIMIT %s OFFSET %s
         """,
-            (f"%{query}%",),
+            (f"%{query}%", limit, offset),
         )
 
         instituciones = [

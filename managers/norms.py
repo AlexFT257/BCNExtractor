@@ -1,7 +1,7 @@
 import hashlib
 import json
 import os
-from datetime import datetime
+from datetime import date, datetime
 from pathlib import Path
 from typing import Dict, List, Optional
 
@@ -234,7 +234,7 @@ class NormsManager:
             "instituciones": instituciones,
         }
 
-    def get_by_institucion(self, id_institucion: int, limit: int = 500) -> List[Dict]:
+    def get_by_institucion(self, id_institucion: int, limit: int = 500, offset: int = 0) -> List[Dict]:
         """Devuelve todas las normas asociadas a una institución."""
         cursor = self.conn.cursor()
         cursor.execute(
@@ -246,9 +246,9 @@ class NormsManager:
             LEFT JOIN tipos_normas tn ON n.id_tipo = tn.id
             WHERE ni.id_institucion = %s
             ORDER BY n.fecha_publicacion DESC NULLS LAST
-            LIMIT %s
+            LIMIT %s OFFSET %s
         """,
-            (id_institucion, limit),
+            (id_institucion, limit, offset),
         )
         rows = cursor.fetchall()
         cursor.close()
@@ -265,7 +265,7 @@ class NormsManager:
             for row in rows
         ]
 
-    def search(self, query: str, limit: int = 20) -> List[Dict]:
+    def search(self, query: str, limit: int = 20, offset: int = 0) -> List[Dict]:
         """Búsqueda full-text en normas."""
         cursor = self.conn.cursor()
         cursor.execute(
@@ -275,9 +275,9 @@ class NormsManager:
             WHERE to_tsvector('spanish', titulo) @@ plainto_tsquery('spanish', %s)
                OR titulo ILIKE %s
             ORDER BY fecha_publicacion DESC
-            LIMIT %s
+            LIMIT %s OFFSET %s
         """,
-            (query, f"%{query}%", limit),
+            (query, f"%{query}%", limit, offset),
         )
 
         results = [
@@ -301,6 +301,25 @@ class NormsManager:
 
         cursor.close()
         return results
+
+    # TODO: Get by date, search text on multiple docs
+    def get_by_date(self, date:date, limit:int=100, offset:int = 0) -> List[Dict]:
+        cursor = self.conn.cursor()
+        norms = []
+        
+        cursor.execute("SELECT * FROM normas WHERE fecha_publicacion = %s LIMIT %s OFFSET %s", (date, limit, offset))
+        for row in cursor.fetchall():
+            norms.append({
+                "norma_id": row[0],
+                "tipo_id": row[1],
+                "titulo": row[2],
+                "numero": row[3],
+                "estado": row[4],
+                "fecha_publicacion": row[5],
+            })
+        
+        cursor.close()
+        return norms
 
     def get_stats(self) -> Dict:
         """Estadísticas de normas."""
