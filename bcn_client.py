@@ -11,7 +11,6 @@ from requests.adapters import HTTPAdapter
 from requests.sessions import Request
 from urllib3.util.retry import Retry
 
-logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 
@@ -97,7 +96,6 @@ class BCNClient:
     def _make_request(
         self, url: str, use_cache: bool = True, cache_key: Optional[str] = None
     ) -> Optional[str]:
-        print("Making request...")
         cache_key = cache_key or url
 
         if use_cache:

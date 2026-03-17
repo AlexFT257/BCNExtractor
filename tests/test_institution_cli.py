@@ -1,40 +1,29 @@
-import argparse
+from typer.testing import CliRunner
 
-import institution_cli
+from bcn_cli import app
 
-test_inst_id = 1041
-test_norm_id = 271391
-test_query = "minis"
+runner = CliRunner()
 
-
-def make_args(**kwargs):
-    defaults = {
-        "id": test_inst_id,
-        "limit": None,
-        "verbose": False,
-        "force": False,
-        "output": None,
-        "full": True,
-        "query": test_query,
-        "errors": False,
-        "csv": None,
-        "action": "stats",
-        "search": None,
-    }
-    defaults.update(kwargs)
-    return argparse.Namespace(**defaults)
+TEST_INST_ID = "1041"
+TEST_QUERY = "minis"
 
 
 def test_list_get_all():
-    result = institution_cli.list_command(make_args())
-    assert result == 0
+    result = runner.invoke(app, ["instituciones", "list"])
+    assert result.exit_code == 0
 
 
 def test_list_search():
-    result = institution_cli.list_command(make_args(search=test_query))
-    assert result == 0
+    result = runner.invoke(app, ["instituciones", "list", "--search", TEST_QUERY])
+    assert result.exit_code == 0
 
 
 def test_get():
-    result = institution_cli.get_command(make_args())
-    assert result == 0
+    result = runner.invoke(app, ["instituciones", "get", TEST_INST_ID])
+    assert result.exit_code == 0
+
+
+def test_get_not_found():
+    # ID inexistente debe terminar con error
+    result = runner.invoke(app, ["instituciones", "get", "0"])
+    assert result.exit_code != 0

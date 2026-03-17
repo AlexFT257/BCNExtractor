@@ -63,25 +63,38 @@ El sync descarga las normas de la institución activa, las procesa y las guarda 
 
 ### CLI
 
+Los comandos están organizados en grupos. Todos los subcomandos soportan `--help`.
+
 ```bash
 # Inicializar la base de datos y cargar instituciones desde el CSV incluido
 python bcn_cli.py init
 
-# Listar normas de una institución (consulta directa a BCN)
-python bcn_cli.py list 17 --limit 10
+# Normas
+python bcn_cli.py normas list 17 --limit 10       # Listar normas de una institución (consulta directa a BCN)
+python bcn_cli.py normas get 206396 --md out.md   # Descargar norma como Markdown
+python bcn_cli.py normas sync 17 --limit 50       # Sincronizar normas a la base de datos
+python bcn_cli.py normas search "medio ambiente"  # Buscar en la base de datos local
 
-# Sincronizar normas a la base de datos
-python bcn_cli.py sync 17 --limit 50
+# Instituciones
+python bcn_cli.py instituciones list              # Listar todas las instituciones
+python bcn_cli.py instituciones list --search ministerio  # Filtrar por nombre
+python bcn_cli.py instituciones get 1041          # Ver detalle de una institución
+python bcn_cli.py instituciones load data/instituciones.csv  # Cargar desde CSV
 
-# Buscar en la base de datos local
-python bcn_cli.py search "medio ambiente"
-
-# Ver estadísticas
-python bcn_cli.py stats
-
-# Gestionar instituciones
-python institution_cli.py load data/instituciones.csv
+# Sistema
+python bcn_cli.py stats                           # Ver estadísticas
+python bcn_cli.py stats --errors                  # Incluir errores recientes
+python bcn_cli.py cache stats                     # Info del caché local
+python bcn_cli.py cache clear                     # Limpiar caché
 ```
+
+El flag `--debug` es global y puede combinarse con cualquier comando. Activa los logs internos del cliente HTTP (requests, caché, reintentos):
+
+```bash
+python bcn_cli.py --debug normas sync 17
+```
+
+Sin el flag, solo se muestran warnings relevantes (como normas con ID inválido). Los logs de nivel INFO quedan silenciados.
 
 ### API REST
 
@@ -97,16 +110,16 @@ Swagger UI disponible en `http://localhost:8000/docs`.
 BCN (web service)
       |
       v
-BCNClient (bcn_client.py)       — HTTP, caché, reintentos, rate limiting
+BCNClient (bcn_client.py)           — HTTP, caché, reintentos, rate limiting
       |
       v
 BCNXMLParser (utils/norm_parser.py) — lxml, extracción de metadatos, conversión a Markdown
       |
       v
-Managers (managers/)            — NormsManager, InstitutionManager, TiposNormasManager
+Managers (managers/)                — NormsManager, InstitutionManager, TiposNormasManager
       |
       v
-PostgreSQL (Docker)             — FTS en español, índices GIN, hash MD5 para detección de cambios
+PostgreSQL (Docker)                 — FTS en español, índices GIN, hash MD5 para detección de cambios
 
 Interfaces: TUI (bcn_tui.py) · CLI (bcn_cli.py) · REST API (api.py)
 ```
@@ -127,12 +140,20 @@ Interfaces: TUI (bcn_tui.py) · CLI (bcn_cli.py) · REST API (api.py)
 BCNExtractor/
 ├── bcn_client.py           # Cliente HTTP para la BCN
 ├── bcn_tui.py              # TUI (interfaz de terminal)
-├── bcn_cli.py              # CLI principal
-├── institution_cli.py      # CLI para gestión de instituciones
+├── bcn_cli.py              # Entry point de la CLI
 ├── api.py                  # API REST (FastAPI)
 ├── docker-compose.yml
 ├── requirements.txt
 ├── .env.example
+├── cli/                    # Lógica de la CLI
+│   ├── main.py             # Registro de comandos (Typer)
+│   ├── output.py           # Presentación con Rich
+│   ├── console.py          # Instancia compartida de Console
+│   ├── _internal.py        # Conexión y managers compartidos
+│   └── commands/
+│       ├── normas.py       # list, get, sync, search
+│       ├── instituciones.py# list, get, load
+│       └── sistema.py      # init, stats, cache
 ├── managers/
 │   ├── institutions.py
 │   ├── norms.py

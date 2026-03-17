@@ -1,6 +1,6 @@
 import pytest
 
-from bcn_cli import BCNClient
+from bcn_client import BCNClient
 from managers.norms import NormsManager
 from utils.norm_parser import BCNXMLParser
 
