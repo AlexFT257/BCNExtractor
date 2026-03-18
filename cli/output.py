@@ -1,3 +1,8 @@
+"""
+Toda la lógica de presentación vive acá.
+Los comandos nunca llaman a print() directamente.
+"""
+
 from rich import box
 from rich.panel import Panel
 from rich.table import Table
@@ -5,8 +10,8 @@ from rich.text import Text
 
 from cli.console import console
 
-
 # ── Normas ────────────────────────────────────────────────────────────────────
+
 
 def print_normas_list(normas: list, verbose: bool = False):
     table = Table(
@@ -78,12 +83,18 @@ def print_search_results(results: list):
 
 
 def print_sync_progress(i: int, total: int, id_norma: int, result: str):
-    color = {"nueva": "green", "actualizada": "yellow", "sin_cambios": "dim"}.get(result, "red")
-    console.print(f"  [{i}/{total}] Norma [cyan]{id_norma}[/cyan] → [bold {color}]{result}[/bold {color}]")
+    color = {"nueva": "green", "actualizada": "yellow", "sin_cambios": "dim"}.get(
+        result, "red"
+    )
+    console.print(
+        f"  [{i}/{total}] Norma [cyan]{id_norma}[/cyan] → [bold {color}]{result}[/bold {color}]"
+    )
 
 
 def print_sync_error(i: int, total: int, id_norma: int, error: str):
-    console.print(f"  [{i}/{total}] Norma [cyan]{id_norma}[/cyan] → [bold red]✗ {error}[/bold red]")
+    console.print(
+        f"  [{i}/{total}] Norma [cyan]{id_norma}[/cyan] → [bold red]✗ {error}[/bold red]"
+    )
 
 
 def print_sync_summary(stats: dict, total: int):
@@ -102,6 +113,7 @@ def print_sync_summary(stats: dict, total: int):
 
 
 # ── Stats ─────────────────────────────────────────────────────────────────────
+
 
 def print_stats(norms_stats: dict, inst_stats: dict, tipos_total: int, log_stats: dict):
     # Normas
@@ -131,12 +143,20 @@ def print_stats(norms_stats: dict, inst_stats: dict, tipos_total: int, log_stats
     ops_table = Table(box=box.SIMPLE_HEAD, show_edge=False, header_style="bold cyan")
     ops_table.add_column("Estado", min_width=16)
     ops_table.add_column("Cantidad", justify="right", style="bold")
-    for estado, count in log_stats.items():
-        ops_table.add_row(estado.capitalize(), str(count))
+
+    ops_table.add_row("Total", str(log_stats.get("total", 0)))
+
+    por_estado = log_stats.get("por_estado", {})
+    if por_estado:
+        ops_table.add_section()
+        for estado, count in por_estado.items():
+            ops_table.add_row(f"  {estado.capitalize()}", str(count))
 
     console.print(Panel(normas_table, title="Normas", border_style="cyan"))
     console.print(Panel(inst_table, title="Instituciones", border_style="cyan"))
-    console.print(Panel(ops_table, title="Operaciones (últimos 7 días)", border_style="cyan"))
+    console.print(
+        Panel(ops_table, title="Operaciones (últimos 7 días)", border_style="cyan")
+    )
 
 
 def print_recent_errors(errors: list):
@@ -144,10 +164,12 @@ def print_recent_errors(errors: list):
         return
     console.print("\n[bold red]Errores recientes:[/bold red]")
     for err in errors:
-        console.print(f"  Norma [cyan]{err[0]}[/cyan] — {err[2][:80]}")
+        mensaje = err.get("error_mensaje") or "sin detalle"
+        console.print(f"  Norma [cyan]{err['id_norma']}[/cyan] — {mensaje[:80]}")
 
 
 # ── Cache ─────────────────────────────────────────────────────────────────────
+
 
 def print_cache_stats(stats: dict):
     table = Table(box=box.SIMPLE_HEAD, show_edge=False, header_style="bold cyan")
@@ -162,6 +184,7 @@ def print_cache_stats(stats: dict):
 
 
 # ── Mensajes genéricos ────────────────────────────────────────────────────────
+
 
 def success(msg: str):
     console.print(f"[bold green]✓[/bold green] {msg}")

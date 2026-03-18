@@ -48,7 +48,7 @@ class InstitutionManager:
 
         self.conn.commit()
         cursor.close()
-        print(f"Tabla {self.table_name} creada/validada")
+        # print(f"Tabla {self.table_name} creada/validada")
 
     def get_all(self) -> List[Institution]:
         cursor = self.conn.cursor()

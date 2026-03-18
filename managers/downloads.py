@@ -69,7 +69,7 @@ class DownloadManager:
                 INSERT INTO descargas (id_norma, tipo_descarga, estado, error_mensaje)
                 VALUES (%s, %s, %s, %s)
             """,
-                (id_norma, tipo_descarga, estado, error),
+                (id_norma, tipo_descarga, estado, error or None),
             )
 
             self.conn.commit()

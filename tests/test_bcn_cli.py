@@ -52,7 +52,6 @@ def test_stats():
     result = runner.invoke(app, ["stats"])
     assert result.exit_code == 0
 
-
 def test_stats_errors():
     result = runner.invoke(app, ["stats", "--errors"])
     assert result.exit_code == 0
