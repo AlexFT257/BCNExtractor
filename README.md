@@ -146,7 +146,6 @@ BCNExtractor/
 ├── requirements.txt
 ├── .env.example
 ├── cli/                    # Lógica de la CLI
-│   ├── main.py             # Registro de comandos (Typer)
 │   ├── output.py           # Presentación con Rich
 │   ├── console.py          # Instancia compartida de Console
 │   ├── _internal.py        # Conexión y managers compartidos
