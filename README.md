@@ -99,7 +99,7 @@ Sin el flag, solo se muestran warnings relevantes (como normas con ID inválido)
 ### API REST
 
 ```bash
-uvicorn api:app --reload
+fastapi dev "./api/main.py"
 ```
 
 Swagger UI disponible en `http://localhost:8000/docs`.
@@ -141,7 +141,6 @@ BCNExtractor/
 ├── bcn_client.py           # Cliente HTTP para la BCN
 ├── bcn_tui.py              # TUI (interfaz de terminal)
 ├── bcn_cli.py              # Entry point de la CLI
-├── api.py                  # API REST (FastAPI)
 ├── docker-compose.yml
 ├── requirements.txt
 ├── .env.example
@@ -153,6 +152,15 @@ BCNExtractor/
 │       ├── normas.py       # list, get, sync, search
 │       ├── instituciones.py# list, get, load
 │       └── sistema.py      # init, stats, cache
+
+├── api/                      # Lógica de la API
+│   ├── main.py               # App FastAPI + registro de routers
+│   ├── dependencies.py       # Instancias compartidas (client, parser, managers)
+│   └── routers/
+│       ├── normas.py         # Endpoints de normas
+│       └── instituciones.py  # Endpoints de instituciones
+│   └── services/
+│       └── sync.py           # Endpoint de sync
 ├── managers/
 │   ├── institutions.py
 │   ├── norms.py
