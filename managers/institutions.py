@@ -21,7 +21,7 @@ class InstitutionManager:
 
         if not self.conn:
             self.conn = psycopg2.connect(
-                host="localhost",
+                host=os.getenv("POSTGRES_HOST", "localhost"),
                 port=os.getenv("POSTGRES_PORT", 5432),
                 database=os.getenv("POSTGRES_DB", "bcn_normas"),
                 user=os.getenv("POSTGRES_USER", "bcn_user"),
@@ -50,14 +50,18 @@ class InstitutionManager:
         cursor.close()
         # print(f"Tabla {self.table_name} creada/validada")
 
-    def get_all(self) -> List[Institution]:
+    def get_all(self, limit: int = 20, offset: int = 0) -> List[Institution]:
         cursor = self.conn.cursor()
 
-        cursor.execute(f"""
+        cursor.execute(
+            f"""
             SELECT id, nombre, fecha_agregada, fecha_actualizada
             FROM {self.table_name}
             ORDER BY nombre
-        """)
+            LIMIT %s OFFSET %s
+        """,
+            (limit, offset),
+        )
 
         instituciones = [
             Institution(
