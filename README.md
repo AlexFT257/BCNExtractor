@@ -96,6 +96,45 @@ python bcn_cli.py --debug normas sync 17
 
 Sin el flag, solo se muestran warnings relevantes (como normas con ID inválido). Los logs de nivel INFO quedan silenciados.
 
+### Scheduler
+
+Permite programar la sincronización automática de instituciones como un proceso independiente en background. Compatible con Windows, Mac y Linux.
+
+```bash
+# Iniciar el scheduler (retorna inmediatamente, corre en background)
+python bcn_cli.py scheduler start --inst 17,42,1041
+
+# Con horario y día específicos
+python bcn_cli.py scheduler start --inst 17,42 --hora 2 --minuto 0 --dia mon-fri
+
+# Verificar si está corriendo
+python bcn_cli.py scheduler status
+
+# Ver jobs registrados y su último estado
+python bcn_cli.py scheduler list
+python bcn_cli.py scheduler list --inst 17        # filtrar por institución
+
+# Registrar o actualizar un job sin reiniciar el scheduler
+python bcn_cli.py scheduler add 1041 --hora 3
+
+# Eliminar un job por su ID (ver IDs con 'scheduler list')
+python bcn_cli.py scheduler remove 2
+
+# Detener el scheduler
+python bcn_cli.py scheduler stop
+```
+
+| Opción | Descripción | Default |
+|--------|-------------|---------|
+| `--inst` | IDs de instituciones separados por coma | requerido |
+| `--hora` | Hora de ejecución UTC (0-23) | `23` |
+| `--minuto` | Minuto de ejecución (0-59) | `59` |
+| `--limit` | Normas máximas por sync | `200` |
+| `--gap` | Minutos de separación entre instituciones | `0` |
+| `--dia` | Día(s) de la semana: `mon` `tue` `wed` `thu` `fri` `sat` `sun`. Rangos: `mon-fri`. Varios: `mon,wed,fri`. Omitir = todos los días | `None` |
+
+Los logs del scheduler se escriben en `logs/scheduler.log`. El estado de cada ejecución (ok / error) queda registrado en la tabla `scheduler_jobs` de PostgreSQL.
+
 ### API REST
 
 ```bash
@@ -116,12 +155,12 @@ BCNClient (bcn_client.py)           — HTTP, caché, reintentos, rate limiting
 BCNXMLParser (utils/norm_parser.py) — lxml, extracción de metadatos, conversión a Markdown
       |
       v
-Managers (managers/)                — NormsManager, InstitutionManager, TiposNormasManager
+Managers (managers/)                — NormsManager, InstitutionManager, TiposNormasManager, SchedulesManager
       |
       v
 PostgreSQL (Docker)                 — FTS en español, índices GIN, hash MD5 para detección de cambios
 
-Interfaces: TUI (bcn_tui.py) · CLI (bcn_cli.py) · REST API (api.py)
+Interfaces: TUI (bcn_tui.py) · CLI (bcn_cli.py) · REST API (api.py) · Scheduler (scheduler_runner.py)
 ```
 
 ## Estado del proyecto
@@ -132,6 +171,7 @@ Interfaces: TUI (bcn_tui.py) · CLI (bcn_cli.py) · REST API (api.py)
 | 2 — Optimización | Caché, rate limiting, reintentos, benchmarks | Completada |
 | 3 — TUI | Interfaz de terminal, sync interactivo, lector de normas | Completada |
 | 4 — API | FastAPI, OpenAPI, búsqueda avanzada | En desarrollo |
+| 4 — Scheduler | Sync automático programable, proceso independiente cross-platform | Completada |
 | 5 — Frontend | Web UI, visualización de relaciones | Pendiente |
 
 ## Estructura del proyecto
@@ -141,6 +181,7 @@ BCNExtractor/
 ├── bcn_client.py           # Cliente HTTP para la BCN
 ├── bcn_tui.py              # TUI (interfaz de terminal)
 ├── bcn_cli.py              # Entry point de la CLI
+├── scheduler_runner.py     # Proceso independiente del scheduler
 ├── docker-compose.yml
 ├── requirements.txt
 ├── .env.example
@@ -151,8 +192,8 @@ BCNExtractor/
 │   └── commands/
 │       ├── normas.py       # list, get, sync, search
 │       ├── instituciones.py# list, get, load
-│       └── sistema.py      # init, stats, cache
-
+│       ├── sistema.py      # init, stats, cache
+│       └── scheduler.py    # start, stop, status, add, remove, list
 ├── api/                      # Lógica de la API
 │   ├── main.py               # App FastAPI + registro de routers
 │   ├── dependencies.py       # Instancias compartidas (client, parser, managers)
@@ -165,7 +206,8 @@ BCNExtractor/
 │   ├── institutions.py
 │   ├── norms.py
 │   ├── norms_types.py
-│   └── downloads.py
+│   ├── downloads.py
+│   └── schedules.py          # CRUD de scheduler_jobs
 ├── loaders/
 │   └── institutions.py
 ├── utils/

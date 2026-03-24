@@ -182,6 +182,64 @@ def print_cache_stats(stats: dict):
 
     console.print(Panel(table, title="Caché local", border_style="dim"))
 
+# ── Scheduler ─────────────────────────────────────────────────────────────────
+
+
+def print_scheduler_jobs(jobs: list):
+    if not jobs:
+        console.print("[yellow]No hay jobs registrados.[/yellow]")
+        console.print("[dim]Usa 'scheduler add <inst_id>' para registrar uno.[/dim]")
+        return
+
+    table = Table(
+        box=box.SIMPLE_HEAD,
+        show_edge=False,
+        highlight=True,
+        header_style="bold cyan",
+    )
+    table.add_column("ID",        style="dim",  width=4,  justify="right")
+    table.add_column("Inst",      style="cyan", width=6,  justify="right")
+    table.add_column("Nombre",                  width=20)
+    table.add_column("Horario",                 width=10, justify="center")
+    table.add_column("Límite",                  width=7,  justify="right")
+    table.add_column("Última ejecución",        width=18)
+    table.add_column("Estado",                  width=8,  justify="center")
+    table.add_column("Runs",                    width=5,  justify="right")
+
+    status_style = {
+        "ok":    "[green]ok[/green]",
+        "error": "[red]error[/red]",
+    }
+
+    for job in jobs:
+        last_run = job.get("last_run")
+        last_run_str = last_run.strftime("%Y-%m-%d %H:%M") if last_run else "[dim]nunca[/dim]"
+
+        last_status = job.get("last_status") or "—"
+        status_str = status_style.get(last_status, f"[dim]{last_status}[/dim]")
+
+        table.add_row(
+            str(job["id"]),
+            str(job["inst_id"]),
+            job.get("nombre", "—"),
+            f"{job['hora']:02d}:{job['minuto']:02d} UTC",
+            str(job.get("limite", "—")),
+            last_run_str,
+            status_str,
+            str(job.get("run_count", 0)),
+        )
+
+    console.print(f"\n  [bold]{len(jobs)}[/bold] job(s) registrado(s)\n")
+    console.print(table)
+
+    errors = [j for j in jobs if j.get("last_status") == "error" and j.get("last_error")]
+    if errors:
+        console.print("\n[bold red]Últimos errores:[/bold red]")
+        for job in errors:
+            console.print(
+                f"  [cyan]{job['nombre']}[/cyan] — {job['last_error'][:80]}"
+            )
+
 
 # ── Mensajes genéricos ────────────────────────────────────────────────────────
 
@@ -200,3 +258,4 @@ def info(msg: str):
 
 def warning(msg: str):
     console.print(f"[yellow]⚠[/yellow] {msg}")
+

@@ -1,7 +1,7 @@
+import logging
 import os
 import sys
 
-import logging
 import psycopg2
 from dotenv import load_dotenv
 
@@ -34,6 +34,7 @@ def init_managers():
     from managers.institutions import InstitutionManager
     from managers.norms import NormsManager
     from managers.norms_types import TiposNormasManager
+    from managers.shedules import SchedulerManager
 
     try:
         conn = create_connection()
@@ -44,6 +45,7 @@ def init_managers():
             "tipos": TiposNormasManager(db_connection=conn),
             "normas": NormsManager(db_connection=conn),
             "logger": DownloadManager(db_connection=conn),
+            "scheduler": SchedulerManager(db_connection=conn),
         }
     except Exception as e:
         error(f"No se pudo conectar a la base de datos: {e}")
