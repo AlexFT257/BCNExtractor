@@ -60,8 +60,6 @@ class InstitutionLoader:
 
         print(f"    Instituciones en CSV: {len(instituciones)}")
 
-        self.ensure_institution_table()
-
         if mode == "replace":
             stats = self._replace_all(instituciones)
         elif mode == "update":

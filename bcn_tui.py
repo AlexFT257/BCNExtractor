@@ -38,6 +38,7 @@ from textual.widgets import (
 
 # ── HELPERS ──────────────────────────────────────────────────────────────────
 
+
 def _init_managers(conn=None):
     """
     Devuelve un dict con todos los managers compartiendo una sola conexion.
@@ -46,10 +47,10 @@ def _init_managers(conn=None):
     import psycopg2
     from dotenv import load_dotenv
 
+    from managers.downloads import DownloadManager
     from managers.institutions import InstitutionManager
     from managers.norms import NormsManager
     from managers.norms_types import TiposNormasManager
-    from managers.downloads import DownloadManager
 
     load_dotenv()
 
@@ -72,6 +73,7 @@ def _init_managers(conn=None):
 
 
 # ── MODAL: LECTOR ─────────────────────────────────────────────────────────────
+
 
 class ReaderModal(ModalScreen):
     """Muestra el Markdown de una norma usando su md_path de la DB."""
@@ -109,6 +111,7 @@ class ReaderModal(ModalScreen):
 
 
 # ── MODAL: SINCRONIZACION ─────────────────────────────────────────────────────
+
 
 class SyncModal(ModalScreen):
     """
@@ -284,6 +287,7 @@ class SyncModal(ModalScreen):
 
 # ── APP PRINCIPAL ─────────────────────────────────────────────────────────────
 
+
 class BCNApp(App):
     """BCN Extractor TUI."""
 
@@ -370,7 +374,7 @@ class BCNApp(App):
     def _load_instituciones(self) -> None:
         try:
             mgrs = _init_managers()
-            self._all_instituciones = mgrs["instituciones"].get_all()
+            self._all_instituciones = mgrs["instituciones"].get_all(limit=200)
             mgrs["conn"].close()
             self._render_inst_list(self._all_instituciones)
         except Exception as e:

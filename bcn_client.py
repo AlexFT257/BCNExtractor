@@ -50,9 +50,13 @@ class BCNClient:
 
         retry_strategy = Retry(
             total=max_retries,
-            backoff_factor=1,
+            connect=max_retries,
+            read=max_retries,
+            status=max_retries,
+            backoff_factor=0.5,
             status_forcelist=[429, 500, 502, 503, 504],
             allowed_methods=["GET", "POST"],
+            respect_retry_after_header=False,
         )
 
         adapter = HTTPAdapter(max_retries=retry_strategy)
@@ -64,6 +68,7 @@ class BCNClient:
                 "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
                 "Accept": "application/xml, text/xml, */*",
                 "Accept-Language": "es-CL,es;q=0.9",
+                "Referer": "https://www.leychile.cl/",
             }
         )
 
@@ -229,79 +234,83 @@ class BCNClient:
     ) -> Optional[str]:
         url = self.BASE_URL + self.ENDPOINTS["norma_completa"].format(id_norma)
         return self._make_request(url, use_cache=use_cache)
-        
+
     def download_normas_institucion(
         self,
         id_institucion: int,
         download_full: bool = True,
         limit: Optional[int] = None,
-        callback=None
+        callback=None,
     ) -> Dict:
-        
+
         stats = {
-            'total': 0,
-            'exitosas': 0,
-            'fallidas': 0,
-            'omitidas': 0,
-            'inicio': datetime.now(),
-            'fin': None
+            "total": 0,
+            "exitosas": 0,
+            "fallidas": 0,
+            "omitidas": 0,
+            "inicio": datetime.now(),
+            "fin": None,
         }
-        
+
         logger.info(f"Iniciando descarga de normas - Institución: {id_institucion}")
-        
+
         # Obtener lista de normas
         normas = self.get_normas_por_institucion(id_institucion)
         if not normas:
             logger.error("No se pudo obtener lista de normas")
             return stats
-        
-        stats['total'] = len(normas)
-        
+
+        stats["total"] = len(normas)
+
         # Aplicar límite si se especifica
         if limit:
             normas = normas[:limit]
             logger.info(f"Limitando descarga a {limit} normas")
-        
+
         # Descargar cada norma
         for i, norma_info in enumerate(normas, 1):
-            id_norma = int(norma_info['id_norma'])
-            
-            logger.info(f"[{i}/{len(normas)}] Descargando norma {id_norma}: {norma_info['titulo'][:50]}...")
-            
+            id_norma = int(norma_info["id_norma"])
+
+            logger.info(
+                f"[{i}/{len(normas)}] Descargando norma {id_norma}: {norma_info['titulo'][:50]}..."
+            )
+
             try:
                 # Descargar XML (completo o solo metadatos)
                 if download_full:
                     xml_content = self.get_norma_completa(id_norma)
                 else:
                     xml_content = self.get_norma_metadatos(id_norma)
-                
+
                 if xml_content:
-                    stats['exitosas'] += 1
-                    
+                    stats["exitosas"] += 1
+
                     # Llamar callback si se proporciona
                     if callback:
                         try:
                             callback(norma_info, xml_content)
                         except Exception as e:
-                            logger.error(f"Error en callback para norma {id_norma}: {e}")
+                            logger.error(
+                                f"Error en callback para norma {id_norma}: {e}"
+                            )
                 else:
-                    stats['fallidas'] += 1
-                    
+                    stats["fallidas"] += 1
+
             except Exception as e:
                 logger.error(f"Error descargando norma {id_norma}: {e}")
-                stats['fallidas'] += 1
-        
-        stats['fin'] = datetime.now()
-        duracion = (stats['fin'] - stats['inicio']).total_seconds()
-        
-        logger.info('-'*50)
+                stats["fallidas"] += 1
+
+        stats["fin"] = datetime.now()
+        duracion = (stats["fin"] - stats["inicio"]).total_seconds()
+
+        logger.info("-" * 50)
         logger.info("DESCARGA COMPLETADA")
         logger.info(f"\tTotal:     {stats['total']}")
         logger.info(f"\tExitosas:  {stats['exitosas']}")
         logger.info(f"\tFallidas:  {stats['fallidas']}")
         logger.info(f"\tDuración:  {duracion:.1f}s")
-        logger.info('-'*50)
-        
+        logger.info("-" * 50)
+
         return stats
 
     def get_cache_stats(self) -> Dict:

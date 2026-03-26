@@ -3,7 +3,6 @@ import json
 import os
 from datetime import date, datetime
 from pathlib import Path
-from tracemalloc import start
 from typing import Dict, List, Literal, Optional
 
 import psycopg2
