@@ -239,6 +239,67 @@ def print_scheduler_jobs(jobs: list):
             console.print(
                 f"  [cyan]{job['nombre']}[/cyan] — {job['last_error'][:80]}"
             )
+            
+# ── Metadata ──────────────────────────────────────────────────────────────────
+
+
+def print_norma_metadata(id_norma: int, metadata: dict):
+    if not metadata:
+        console.print(f"[yellow]La norma {id_norma} no tiene metadata registrada.[/yellow]")
+        return
+
+    table = Table(
+        box=box.SIMPLE_HEAD,
+        show_edge=False,
+        header_style="bold cyan",
+    )
+    table.add_column("Clave", style="bold", width=20)
+    table.add_column("Valor")
+
+    for clave, valor in metadata.items():
+        if isinstance(valor, list):
+            for i, item in enumerate(valor):
+                if i == 0:
+                    table.add_row(clave, str(item))
+                else:
+                    table.add_row("", str(item))
+        else:
+            table.add_row(clave, str(valor))
+
+    console.print(Panel(table, title=f"Metadata — Norma {id_norma}", border_style="cyan"))
+
+
+def print_metadata_stats(stats: dict):
+    table = Table(box=box.SIMPLE_HEAD, show_edge=False, header_style="bold cyan")
+    table.add_column("Métrica", min_width=24)
+    table.add_column("Valor", justify="right", style="bold")
+
+    table.add_row("Total entradas", str(stats.get("total_entradas", 0)))
+    table.add_row("Normas con metadata", str(stats.get("normas_con_metadata", 0)))
+
+    por_clave = stats.get("por_clave", [])
+    if por_clave:
+        table.add_section()
+        for entry in por_clave:
+            table.add_row(f"  {entry['clave']}", str(entry["total"]))
+
+    console.print(Panel(table, title="Estadísticas de Metadata", border_style="cyan"))
+
+
+def print_metadata_claves(claves: list):
+    if not claves:
+        console.print("[yellow]No hay claves registradas.[/yellow]")
+        return
+
+    table = Table(box=box.SIMPLE_HEAD, show_edge=False, header_style="bold cyan")
+    table.add_column("N°", style="dim", width=4, justify="right")
+    table.add_column("Clave", style="cyan")
+
+    for i, clave in enumerate(claves, 1):
+        table.add_row(str(i), clave)
+
+    console.print(f"\n  [bold]{len(claves)}[/bold] clave(s) disponible(s)\n")
+    console.print(table)
 
 
 # ── Mensajes genéricos ────────────────────────────────────────────────────────

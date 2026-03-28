@@ -35,6 +35,7 @@ def init_managers():
     from managers.norms import NormsManager
     from managers.norms_types import TiposNormasManager
     from managers.schedules import SchedulesManager
+    from managers.metadata import MetadataManager
 
     try:
         conn = create_connection()
@@ -46,6 +47,7 @@ def init_managers():
             "normas": NormsManager(db_connection=conn),
             "logger": DownloadManager(db_connection=conn),
             "scheduler": SchedulesManager(db_connection=conn),
+            "metadata": MetadataManager(db_connection=conn),
         }
     except Exception as e:
         error(f"No se pudo conectar a la base de datos: {e}")

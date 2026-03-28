@@ -70,22 +70,29 @@ Los comandos están organizados en grupos. Todos los subcomandos soportan `--hel
 python bcn_cli.py init
 
 # Normas
-python bcn_cli.py normas list 17 --limit 10       # Listar normas de una institución (consulta directa a BCN)
-python bcn_cli.py normas get 206396 --md out.md   # Descargar norma como Markdown
-python bcn_cli.py normas sync 17 --limit 50       # Sincronizar normas a la base de datos
-python bcn_cli.py normas search "medio ambiente"  # Buscar en la base de datos local
+python bcn_cli.py normas list 17 --limit 10               # Listar normas de una institución (consulta directa a BCN)
+python bcn_cli.py normas get 206396 --md out.md           # Descargar norma como Markdown
+python bcn_cli.py normas sync 17 --limit 50               # Sincronizar normas a la base de datos
+python bcn_cli.py normas sync 17 --force                  # Re-sincronizar aunque no haya cambios
+python bcn_cli.py normas search "medio ambiente"          # Buscar en la base de datos local
+python bcn_cli.py normas metadata 206396                  # Ver metadata de una norma específica
+python bcn_cli.py normas by-metadata materia "medio"      # Buscar normas por clave/valor de metadata
+
+# Metadata
+python bcn_cli.py metadata claves                         # Listar todas las claves de metadata disponibles
+python bcn_cli.py metadata stats                          # Estadísticas de la tabla de metadata
 
 # Instituciones
-python bcn_cli.py instituciones list              # Listar todas las instituciones
+python bcn_cli.py instituciones list                      # Listar todas las instituciones
 python bcn_cli.py instituciones list --search ministerio  # Filtrar por nombre
-python bcn_cli.py instituciones get 1041          # Ver detalle de una institución
+python bcn_cli.py instituciones get 1041                  # Ver detalle de una institución
 python bcn_cli.py instituciones load data/instituciones.csv  # Cargar desde CSV
 
 # Sistema
-python bcn_cli.py stats                           # Ver estadísticas
-python bcn_cli.py stats --errors                  # Incluir errores recientes
-python bcn_cli.py cache stats                     # Info del caché local
-python bcn_cli.py cache clear                     # Limpiar caché
+python bcn_cli.py stats                                   # Ver estadísticas
+python bcn_cli.py stats --errors                          # Incluir errores recientes
+python bcn_cli.py cache stats                             # Info del caché local
+python bcn_cli.py cache clear                             # Limpiar caché
 ```
 
 El flag `--debug` es global y puede combinarse con cualquier comando. Activa los logs internos del cliente HTTP (requests, caché, reintentos):
@@ -155,13 +162,26 @@ BCNClient (bcn_client.py)           — HTTP, caché, reintentos, rate limiting
 BCNXMLParser (utils/norm_parser.py) — lxml, extracción de metadatos, conversión a Markdown
       |
       v
-Managers (managers/)                — NormsManager, InstitutionManager, TiposNormasManager, SchedulesManager
+Managers (managers/)                — NormsManager, MetadataManager, InstitutionManager,
+                                      TiposNormasManager, SchedulesManager
       |
       v
 PostgreSQL (Docker)                 — FTS en español, índices GIN, hash MD5 para detección de cambios
+                                      Metadata EAV (normas_metadata), versionado histórico (normas_versiones)
 
 Interfaces: TUI (bcn_tui.py) · CLI (bcn_cli.py) · REST API (api.py) · Scheduler (scheduler_runner.py)
 ```
+
+## Modelo de datos
+
+### Normas (`normas`)
+Tabla principal. Almacena los campos estructurados y estables de cada norma: tipo, número, título, estado, fechas, paths a XML y Markdown, hash MD5 del XML y número de versión actual.
+
+### Metadata (`normas_metadata`)
+Tabla EAV (Entity-Attribute-Value) que separa los campos descriptivos variables de la norma. Permite filtrar por clave específica con índice y absorber nuevos campos sin migración. Claves actuales: `materia`, `organismo`, `derogado`, `es_tratado`.
+
+### Versiones (`normas_versiones`)
+Historial de cambios de cada norma. Cuando el sync detecta que el XML cambió (hash MD5 distinto), archiva el estado anterior antes de sobreescribir. Permite auditar el contenido histórico de una ley. Los archivos XML y Markdown de versiones anteriores se guardan como `{id}_v{n}.xml`.
 
 ## Estado del proyecto
 
@@ -172,6 +192,7 @@ Interfaces: TUI (bcn_tui.py) · CLI (bcn_cli.py) · REST API (api.py) · Schedul
 | 3 — TUI | Interfaz de terminal, sync interactivo, lector de normas | Completada |
 | 4 — API | FastAPI, OpenAPI, búsqueda avanzada | En desarrollo |
 | 4 — Scheduler | Sync automático programable, proceso independiente cross-platform | Completada |
+| 4 — Metadata y versionado | Tabla EAV de metadata, historial de versiones, búsqueda por clave | Completada |
 | 5 — Frontend | Web UI, visualización de relaciones | Pendiente |
 
 ## Estructura del proyecto
@@ -190,28 +211,31 @@ BCNExtractor/
 │   ├── console.py          # Instancia compartida de Console
 │   ├── _internal.py        # Conexión y managers compartidos
 │   └── commands/
-│       ├── normas.py       # list, get, sync, search
+│       ├── normas.py       # list, get, sync, search, metadata, by-metadata
+│       ├── metadata.py     # claves, stats
 │       ├── instituciones.py# list, get, load
 │       ├── sistema.py      # init, stats, cache
 │       └── scheduler.py    # start, stop, status, add, remove, list
-├── api/                      # Lógica de la API
-│   ├── main.py               # App FastAPI + registro de routers
-│   ├── dependencies.py       # Instancias compartidas (client, parser, managers)
+├── api/                    # Lógica de la API
+│   ├── main.py             # App FastAPI + registro de routers
+│   ├── dependencies.py     # Instancias compartidas (client, parser, managers)
 │   └── routers/
-│       ├── normas.py         # Endpoints de normas
-│       └── instituciones.py  # Endpoints de instituciones
+│       ├── normas.py       # Endpoints de normas
+│       └── instituciones.py# Endpoints de instituciones
 │   └── services/
-│       └── sync.py           # Endpoint de sync
+│       └── sync.py         # Endpoint de sync
 ├── managers/
 │   ├── institutions.py
-│   ├── norms.py
+│   ├── norms.py            # NormsManager — CRUD de normas y versionado
+│   ├── metadata.py         # MetadataManager — tabla EAV normas_metadata
 │   ├── norms_types.py
 │   ├── downloads.py
-│   └── schedules.py          # CRUD de scheduler_jobs
+│   └── schedules.py        # CRUD de scheduler_jobs
 ├── loaders/
 │   └── institutions.py
 ├── utils/
 │   ├── norm_parser.py
+│   ├── norm_types.py       # Norm (Pydantic), NormResponse — incluye to_parsed_data()
 │   └── db_logger.py
 └── data/
     ├── instituciones.csv
