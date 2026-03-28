@@ -150,13 +150,13 @@ class TestGetNormasByType:
 
 class TestGetNormasByDateRange:
     def test_rango_valido(self):
-        response = client.get("/normas/rango?start_date=2020-01-01&end_date=2020-12-31")
+        response = client.get("/normas/rango?start_date=2000-01-01&end_date=2020-12-31")
         assert response.status_code == 200
         data = response.json()
         assert "normas" in data
 
     def test_por_fecha_promulgacion(self):
-        response = client.get("/normas/rango?start_date=2020-01-01&date_type=prom")
+        response = client.get("/normas/rango?start_date=2000-01-01&date_type=prom")
         assert response.status_code == 200
 
     def test_sin_start_date_retorna_422(self):
