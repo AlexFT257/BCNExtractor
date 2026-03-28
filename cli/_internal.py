@@ -34,7 +34,7 @@ def init_managers():
     from managers.institutions import InstitutionManager
     from managers.norms import NormsManager
     from managers.norms_types import TiposNormasManager
-    from managers.shedules import SchedulesManager
+    from managers.schedules import SchedulesManager
 
     try:
         conn = create_connection()

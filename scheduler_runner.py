@@ -22,7 +22,7 @@ from managers.schedules import SchedulesManager
 from managers.norms import NormsManager
 from managers.institutions import InstitutionManager
 from managers.norms_types import TiposNormasManager
-from utils.db_logger import DBLogger
+from managers.downloads import DownloadManager
 from utils.norm_parser import BCNXMLParser
 
 load_dotenv()
@@ -51,8 +51,8 @@ def _build_managers() -> dict:
         "conn":          conn,
         "instituciones": InstitutionManager(conn),
         "tipos":         TiposNormasManager(conn),
-        "normas":        NormsManager(conn),
-        "logger":        DBLogger(conn),
+        "normas":        NormsManager(db_connection=conn),
+        "logger":        DownloadManager(conn),
     }
 
 

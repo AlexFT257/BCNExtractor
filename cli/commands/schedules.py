@@ -9,8 +9,6 @@ Comandos para gestionar el scheduler de sync automático:
 """
 
 import json
-import os
-import signal
 import subprocess
 import sys
 from pathlib import Path
@@ -47,7 +45,8 @@ def _launch_process(args: list[str]) -> subprocess.Popen:
             args,
             stdout=log,
             stderr=subprocess.STDOUT,
-            creationflags=subprocess.CREATE_NEW_PROCESS_GROUP | subprocess.DETACHED_PROCESS,
+            creationflags=subprocess.CREATE_NEW_PROCESS_GROUP
+            | subprocess.DETACHED_PROCESS,
         )
 
     return subprocess.Popen(
@@ -97,14 +96,22 @@ def _clear_pid() -> None:
 @app.command("start")
 def start(
     instituciones: str = typer.Option(
-        ..., "--inst", "-i",
+        ...,
+        "--inst",
+        "-i",
         help="IDs de instituciones separados por coma: 17,42,1041",
     ),
-    dia: Optional[str] = typer.Option(None, "--dia", help="Día(s) de la semana: mon tue wed thu fri sat sun. Rangos: mon-fri. Varios: mon,wed,fri. Omitir = todos los días."),
-    hora: int     = typer.Option(23,  "--hora",   help="Hora de ejecución UTC (0-23)"),
-    minuto: int   = typer.Option(59,  "--minuto", help="Minuto de ejecución (0-59)"),
-    limite: int   = typer.Option(200, "--limit", "-n", help="Normas máximas por sync"),
-    espaciado: int = typer.Option(0,  "--gap",    help="Minutos de separación entre instituciones"),
+    dia: Optional[str] = typer.Option(
+        None,
+        "--dia",
+        help="Día(s) de la semana: mon tue wed thu fri sat sun. Rangos: mon-fri. Varios: mon,wed,fri. Omitir = todos los días.",
+    ),
+    hora: int = typer.Option(23, "--hora", help="Hora de ejecución UTC (0-23)"),
+    minuto: int = typer.Option(59, "--minuto", help="Minuto de ejecución (0-59)"),
+    limite: int = typer.Option(200, "--limit", "-n", help="Normas máximas por sync"),
+    espaciado: int = typer.Option(
+        0, "--gap", help="Minutos de separación entre instituciones"
+    ),
 ):
     """Lanza el scheduler como proceso independiente en background."""
     ids = _parse_ids(instituciones)
@@ -122,14 +129,16 @@ def start(
         output.warning("PID registrado pero proceso no existe — limpiando.")
         _clear_pid()
 
-    args_json = json.dumps({
-        "inst_ids":  ids,
-        "hora":      hora,
-        "minuto":    minuto,
-        "limite":    limite,
-        "espaciado": espaciado,
-        "dia":       dia,
-    })
+    args_json = json.dumps(
+        {
+            "inst_ids": ids,
+            "hora": hora,
+            "minuto": minuto,
+            "limite": limite,
+            "espaciado": espaciado,
+            "dia": dia,
+        }
+    )
 
     proc = _launch_process([sys.executable, "scheduler_runner.py", args_json])
     PID_FILE.write_text(str(proc.pid))
@@ -170,7 +179,9 @@ def status():
         output.success(f"Scheduler: corriendo (PID {pid}).")
         output.info(f"Logs en: {LOG_FILE}")
     else:
-        output.warning("Scheduler: PID registrado pero proceso no existe (posible crash).")
+        output.warning(
+            "Scheduler: PID registrado pero proceso no existe (posible crash)."
+        )
         output.info("Usa 'scheduler start' para reiniciarlo.")
         _clear_pid()
 
@@ -178,9 +189,9 @@ def status():
 @app.command("add")
 def add(
     inst_id: int = typer.Argument(..., help="ID de la institución"),
-    hora: int    = typer.Option(23,  "--hora",   help="Hora de ejecución UTC (0-23)"),
-    minuto: int  = typer.Option(59,  "--minuto", help="Minuto de ejecución (0-59)"),
-    limite: int  = typer.Option(200, "--limit", "-n", help="Normas máximas por sync"),
+    hora: int = typer.Option(23, "--hora", help="Hora de ejecución UTC (0-23)"),
+    minuto: int = typer.Option(59, "--minuto", help="Minuto de ejecución (0-59)"),
+    limite: int = typer.Option(200, "--limit", "-n", help="Normas máximas por sync"),
 ):
     """Registra o actualiza un job en la DB. Surte efecto al próximo start."""
     managers = require_managers()
@@ -194,7 +205,9 @@ def add(
             minuto=minuto,
             limite=limite,
         )
-        output.success(f"Job sync_{inst_id} registrado → {hora:02d}:{minuto:02d} UTC diario.")
+        output.success(
+            f"Job sync_{inst_id} registrado → {hora:02d}:{minuto:02d} UTC diario."
+        )
     except Exception as e:
         output.error(str(e))
         raise typer.Exit(1)
@@ -229,9 +242,11 @@ def remove(
 
 @app.command("list")
 def list_jobs(
-    inst_id: Optional[int] = typer.Option(None, "--inst", "-i", help="Filtrar por institución"),
-    limit: int   = typer.Option(20, "--limit", "-n", help="Máximo de resultados"),
-    offset: int  = typer.Option(0,  "--offset",      help="Desplazamiento para paginación"),
+    inst_id: Optional[int] = typer.Option(
+        None, "--inst", "-i", help="Filtrar por institución"
+    ),
+    limit: int = typer.Option(20, "--limit", "-n", help="Máximo de resultados"),
+    offset: int = typer.Option(0, "--offset", help="Desplazamiento para paginación"),
 ):
     """Muestra los jobs registrados y su estado."""
     managers = require_managers()
