@@ -13,3 +13,5 @@ data/logs
 data/cache
 data/xml/*
 data/md/*
+.scheduler.pid
+logs/*
