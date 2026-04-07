@@ -3,7 +3,7 @@ from typing import Annotated
 import typer
 
 from cli._internal import configure_logging
-from cli.commands import institutions, metadata, norms, schedules, system
+from cli.commands import institutions, metadata, norms, schedules, system, nlp
 
 
 def main_callback(
@@ -27,6 +27,8 @@ app.add_typer(norms.app, name="normas")
 app.add_typer(institutions.app, name="instituciones")
 app.add_typer(schedules.app, name="scheduler")
 app.add_typer(metadata.app, name="metadata")
+app.add_typer(nlp.app, name="nlp")
+
 
 # Comandos de sistema directamente en raíz
 app.add_typer(system.app, name="sistema")

@@ -10,6 +10,25 @@ from rich.text import Text
 
 from cli.console import console
 
+
+# ── Mensajes genéricos ────────────────────────────────────────────────────────
+
+
+def success(msg: str):
+    console.print(f"[bold green]✓[/bold green] {msg}")
+
+
+def error(msg: str):
+    console.print(f"[bold red]✗[/bold red] {msg}")
+
+
+def info(msg: str):
+    console.print(f"[dim]{msg}[/dim]")
+
+
+def warning(msg: str):
+    console.print(f"[yellow]⚠[/yellow] {msg}")
+
 # ── Normas ────────────────────────────────────────────────────────────────────
 
 
@@ -302,21 +321,188 @@ def print_metadata_claves(claves: list):
     console.print(table)
 
 
-# ── Mensajes genéricos ────────────────────────────────────────────────────────
-
-
-def success(msg: str):
-    console.print(f"[bold green]✓[/bold green] {msg}")
-
-
-def error(msg: str):
-    console.print(f"[bold red]✗[/bold red] {msg}")
-
-
-def info(msg: str):
-    console.print(f"[dim]{msg}[/dim]")
-
-
-def warning(msg: str):
-    console.print(f"[yellow]⚠[/yellow] {msg}")
-
+# ── NLP ───────────────────────────────────────────────────────────────────────
+ 
+ 
+def print_nlp_resumen(resultado):
+    """Muestra un resumen compacto del resultado de analizar una norma."""
+    table = Table(box=box.SIMPLE_HEAD, show_edge=False, header_style="bold cyan")
+    table.add_column("Categoría", min_width=22)
+    table.add_column("Extraídos", justify="right", style="bold")
+ 
+    table.add_row("Referencias normativas", str(len(resultado.referencias)))
+ 
+    refs_resueltas = sum(1 for r in resultado.referencias if r.resolvida)
+    table.add_row(
+        "  [green]Resueltas[/green]",
+        f"[green]{refs_resueltas}[/green]",
+    )
+    table.add_row(
+        "  [dim]Sin resolver[/dim]",
+        f"[dim]{len(resultado.referencias) - refs_resueltas}[/dim]",
+    )
+    table.add_row("Entidades nombradas", str(len(resultado.entidades)))
+    table.add_row("Obligaciones detectadas", str(len(resultado.obligaciones)))
+ 
+    if resultado.materias_detectadas:
+        table.add_section()
+        table.add_row(
+            "Materias",
+            ", ".join(resultado.materias_detectadas[:4]),
+        )
+ 
+    console.print(Panel(table, title=f"Análisis NLP — Norma {resultado.id_norma}", border_style="cyan"))
+ 
+ 
+def print_nlp_progress(i: int, total: int, id_norma: int, resultado):
+    """Línea de progreso para el análisis batch."""
+    refs = len(resultado.referencias)
+    ents = len(resultado.entidades)
+    console.print(
+        f"  [{i}/{total}] Norma [cyan]{id_norma}[/cyan] → "
+        f"[green]{refs}[/green] refs, [blue]{ents}[/blue] entidades"
+    )
+ 
+ 
+def print_nlp_batch_summary(stats: dict, total: int):
+    table = Table(box=box.ROUNDED, show_header=False, border_style="cyan")
+    table.add_column("Métrica", style="bold")
+    table.add_column("Valor", justify="right")
+ 
+    table.add_row("Total procesadas", str(total))
+    table.add_row("[green]Exitosas[/green]", str(stats["ok"]))
+    table.add_row("[dim]Sin XML en caché[/dim]", str(stats.get("sin_xml", 0)))
+    table.add_row("[red]Errores[/red]", str(stats["errores"]))
+    table.add_row("Referencias extraídas", str(stats["referencias"]))
+    table.add_row("Entidades extraídas", str(stats["entidades"]))
+ 
+    console.print("\n")
+    console.print(Panel(table, title="Análisis NLP completado", border_style="cyan"))
+ 
+ 
+def print_nlp_referencias(id_norma: int, refs: list):
+    table = Table(
+        box=box.SIMPLE_HEAD,
+        show_edge=False,
+        highlight=True,
+        header_style="bold cyan",
+    )
+    table.add_column("Estado", width=3, justify="center")
+    table.add_column("Tipo", width=22)
+    table.add_column("Número", width=10)
+    table.add_column("Año", width=6)
+    table.add_column("Organismo")
+    table.add_column("Texto original", style="dim")
+ 
+    for ref in refs:
+        estado = "[green]✓[/green]" if ref["resolvida"] else "[dim]·[/dim]"
+        table.add_row(
+            estado,
+            ref["tipo_norma"].replace("_", " ").title(),
+            ref["numero"] or "—",
+            ref["anio"] or "—",
+            (ref["organismo"] or "—")[:35],
+            ref["texto_original"][:40],
+        )
+ 
+    resueltas = sum(1 for r in refs if r["resolvida"])
+    console.print(
+        f"\n  [bold]{len(refs)}[/bold] referencia(s) — "
+        f"[green]{resueltas} resueltas[/green], "
+        f"[dim]{len(refs) - resueltas} sin resolver[/dim]\n"
+    )
+    console.print(table)
+ 
+ 
+def print_nlp_entidades(id_norma: int, entidades: list):
+    table = Table(
+        box=box.SIMPLE_HEAD,
+        show_edge=False,
+        highlight=True,
+        header_style="bold cyan",
+    )
+    table.add_column("Tipo", width=12)
+    table.add_column("Entidad")
+    table.add_column("Menciones", width=10, justify="right")
+ 
+    tipo_color = {
+        "organismo": "cyan",
+        "persona":   "green",
+        "lugar":     "yellow",
+        "fecha":     "dim",
+        "monto":     "magenta",
+        "otro":      "dim",
+    }
+ 
+    for ent in entidades:
+        color = tipo_color.get(ent["tipo"], "white")
+        table.add_row(
+            f"[{color}]{ent['tipo']}[/{color}]",
+            ent["texto"],
+            str(ent["frecuencia"]),
+        )
+ 
+    console.print(f"\n  [bold]{len(entidades)}[/bold] entidad(es) única(s)\n")
+    console.print(table)
+ 
+ 
+def print_nlp_obligaciones(id_norma: int, obligaciones: list):
+    console.print(f"\n  [bold]{len(obligaciones)}[/bold] obligación(es) detectada(s)\n")
+ 
+    for i, obl in enumerate(obligaciones, 1):
+        tiene_plazo = bool(obl.get("plazo"))
+        border = "yellow" if tiene_plazo else "dim"
+ 
+        lines = []
+        if obl.get("sujeto"):
+            lines.append(f"[bold]Sujeto:[/bold] {obl['sujeto']}")
+        lines.append(f"[bold]Verbo:[/bold]  {obl['verbo']}")
+        if tiene_plazo:
+            lines.append(f"[bold]Plazo:[/bold]  [yellow]{obl['plazo']}[/yellow]")
+ 
+        resumen = "\n".join(lines)
+        texto_corto = obl["texto_completo"][:200]
+        if len(obl["texto_completo"]) > 200:
+            texto_corto += "…"
+ 
+        console.print(
+            Panel(
+                f"{resumen}\n\n[dim]{texto_corto}[/dim]",
+                title=f"#{i}",
+                border_style=border,
+                expand=False,
+            )
+        )
+ 
+ 
+def print_nlp_stats(stats: dict):
+    # Referencias
+    ref_table = Table(box=box.SIMPLE_HEAD, show_edge=False, header_style="bold cyan")
+    ref_table.add_column("Métrica", min_width=28)
+    ref_table.add_column("Valor", justify="right", style="bold")
+ 
+    ref_table.add_row("Total referencias", str(stats["total_referencias"]))
+    ref_table.add_row("[green]Resueltas[/green]", str(stats["referencias_resueltas"]))
+    ref_table.add_row("[dim]Pendientes[/dim]", str(stats["referencias_pendientes"]))
+ 
+    if stats.get("por_tipo_norma"):
+        ref_table.add_section()
+        for t in stats["por_tipo_norma"]:
+            ref_table.add_row(
+                f"  {t['tipo'].replace('_', ' ').title()}",
+                str(t["total"]),
+            )
+ 
+    # Entidades
+    ent_table = Table(box=box.SIMPLE_HEAD, show_edge=False, header_style="bold cyan")
+    ent_table.add_column("Tipo", min_width=16)
+    ent_table.add_column("Únicas", justify="right", style="bold")
+ 
+    for e in stats.get("entidades_por_tipo", []):
+        ent_table.add_row(e["tipo"].title(), str(e["unicas"]))
+ 
+    console.print(Panel(ref_table, title="Referencias normativas", border_style="cyan"))
+    console.print(Panel(ent_table, title="Entidades nombradas", border_style="cyan"))
+    console.print(
+        f"\n  Obligaciones totales: [bold]{stats['total_obligaciones']}[/bold]\n"
+    )

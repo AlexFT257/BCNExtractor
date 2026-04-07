@@ -7,7 +7,7 @@
 [![Python 3.9+](https://img.shields.io/badge/python-3.9+-blue.svg)](https://www.python.org/downloads/)
 [![PostgreSQL 15+](https://img.shields.io/badge/postgresql-15+-blue.svg)](https://www.postgresql.org/)
 
-Herramienta de código abierto pensada para investigadores, desarrolladores y organizaciones que necesiten acceso programático a la legislación chilena. Cubre el pipeline completo: extracción desde los servicios web de la BCN, parseo de XML, almacenamiento en PostgreSQL y búsqueda full-text.
+Herramienta de código abierto pensada para investigadores, desarrolladores y organizaciones que necesiten acceso programático a la legislación chilena. Cubre el pipeline completo: extracción desde los servicios web de la BCN, parseo de XML, almacenamiento en PostgreSQL, búsqueda full-text y análisis NLP de referencias normativas.
 
 > Este proyecto no está afiliado oficialmente con la Biblioteca del Congreso Nacional de Chile.
 
@@ -88,6 +88,21 @@ python bcn_cli.py instituciones list --search ministerio  # Filtrar por nombre
 python bcn_cli.py instituciones get 1041                  # Ver detalle de una institución
 python bcn_cli.py instituciones load data/instituciones.csv  # Cargar desde CSV
 
+# NLP
+python bcn_cli.py nlp analizar 206396                     # Analizar una norma específica
+python bcn_cli.py nlp analizar-institucion 17             # Analizar todas las normas de una institución
+python bcn_cli.py nlp analizar-institucion 17 --limit 50  # Limitar el batch
+python bcn_cli.py nlp analizar-institucion 17 --forzar    # Re-analizar aunque ya exista análisis
+python bcn_cli.py nlp resolver                            # Resolver referencias pendientes (todas)
+python bcn_cli.py nlp resolver 206396                     # Resolver referencias de una norma
+python bcn_cli.py nlp referencias 206396                  # Ver referencias extraídas
+python bcn_cli.py nlp referencias 206396 --resueltas      # Solo las resueltas contra la DB
+python bcn_cli.py nlp entidades 206396                    # Ver entidades nombradas
+python bcn_cli.py nlp entidades 206396 --tipo organismo   # Filtrar por tipo
+python bcn_cli.py nlp obligaciones 206396                 # Ver obligaciones detectadas
+python bcn_cli.py nlp obligaciones 206396 --con-plazo     # Solo las que tienen plazo
+python bcn_cli.py nlp stats                               # Estadísticas globales del análisis NLP
+
 # Sistema
 python bcn_cli.py stats                                   # Ver estadísticas
 python bcn_cli.py stats --errors                          # Incluir errores recientes
@@ -163,14 +178,40 @@ BCNXMLParser (utils/norm_parser.py) — lxml, extracción de metadatos, conversi
       |
       v
 Managers (managers/)                — NormsManager, MetadataManager, InstitutionManager,
-                                      TiposNormasManager, SchedulesManager
+                                      TiposNormasManager, SchedulesManager, NLPManager
       |
       v
 PostgreSQL (Docker)                 — FTS en español, índices GIN, hash MD5 para detección de cambios
                                       Metadata EAV (normas_metadata), versionado histórico (normas_versiones)
+                                      NLP (normas_referencias, normas_entidades, normas_obligaciones)
 
 Interfaces: TUI (bcn_tui.py) · CLI (bcn_cli.py) · REST API (api.py) · Scheduler (scheduler_runner.py)
 ```
+
+### Pipeline NLP
+
+El análisis NLP corre como una etapa independiente y opcional después del sync. Usa el mismo XML cacheado, por lo que no genera tráfico adicional a la BCN.
+
+```
+BCNClient (caché local)
+      |
+      v
+BCNXMLParser → Markdown
+      |
+      v
+NLPAnalyzer (utils/nlp_analyzer.py)
+  ├── EntityRuler   — referencias normativas (NORMA_REF) via patrones de token
+  ├── NER           — personas, organismos, lugares (es_core_news_lg)
+  └── Dependencias  — obligaciones y plazos via árbol sintáctico
+      |
+      v
+NLPManager (managers/nlp.py)
+  ├── normas_referencias  — tipo, número, año, organismo, estado de resolución
+  ├── normas_entidades    — entidades nombradas con tipo y posición
+  └── normas_obligaciones — verbo, sujeto y plazo detectados
+```
+
+Las referencias a normas que no están en la DB local se guardan con `resolvida = false`. Al ejecutar `bcn nlp resolver` el sistema intenta vincularlas contra las normas disponibles. A medida que se sincronizan más instituciones, el grafo de relaciones se completa de forma diferida.
 
 ## Modelo de datos
 
@@ -183,6 +224,15 @@ Tabla EAV (Entity-Attribute-Value) que separa los campos descriptivos variables 
 ### Versiones (`normas_versiones`)
 Historial de cambios de cada norma. Cuando el sync detecta que el XML cambió (hash MD5 distinto), archiva el estado anterior antes de sobreescribir. Permite auditar el contenido histórico de una ley. Los archivos XML y Markdown de versiones anteriores se guardan como `{id}_v{n}.xml`.
 
+### Referencias NLP (`normas_referencias`)
+Referencias a otras normas detectadas en el texto de cada ley o decreto. Incluye tipo de norma, número, año de emisión y organismo cuando están presentes. El campo `resolvida` indica si la norma referenciada existe en la DB local; `id_norma_ref` apunta a ella cuando es así.
+
+### Entidades NLP (`normas_entidades`)
+Entidades nombradas extraídas por el modelo NER: organismos, personas, lugares y fechas. Cada entrada incluye el texto original, el tipo y la frecuencia de mención.
+
+### Obligaciones NLP (`normas_obligaciones`)
+Oraciones con verbos de obligación o permisión (`deberá`, `podrá`, `se prohíbe`, etc.), con el sujeto gramatical y el plazo detectados cuando están presentes.
+
 ## Estado del proyecto
 
 | Fase | Descripción | Estado |
@@ -190,10 +240,10 @@ Historial de cambios de cada norma. Cuando el sync detecta que el XML cambió (h
 | 1 — MVP | CLI, extracción, almacenamiento, Docker | Completada |
 | 2 — Optimización | Caché, rate limiting, reintentos, benchmarks | Completada |
 | 3 — TUI | Interfaz de terminal, sync interactivo, lector de normas | Completada |
-| 4 — API | FastAPI, OpenAPI, búsqueda avanzada | En desarrollo |
-| 4 — Scheduler | Sync automático programable, proceso independiente cross-platform | Completada |
-| 4 — Metadata y versionado | Tabla EAV de metadata, historial de versiones, búsqueda por clave | Completada |
-| 5 — Frontend | Web UI, visualización de relaciones | Pendiente |
+| 4 — API | FastAPI, OpenAPI, búsqueda avanzada | Completada |
+| 5 — Scheduler | Sync automático programable, proceso independiente cross-platform | Completada |
+| 5 — Metadata y versionado | Tabla EAV de metadata, historial de versiones, búsqueda por clave | Completada |
+| 5 — NLP | Referencias normativas, NER, obligaciones y plazos | En desarrollo |
 
 ## Estructura del proyecto
 
@@ -215,7 +265,8 @@ BCNExtractor/
 │       ├── metadata.py     # claves, stats
 │       ├── instituciones.py# list, get, load
 │       ├── sistema.py      # init, stats, cache
-│       └── scheduler.py    # start, stop, status, add, remove, list
+│       ├── scheduler.py    # start, stop, status, add, remove, list
+│       └── nlp.py          # analizar, analizar-institucion, resolver, referencias, entidades, obligaciones, stats
 ├── api/                    # Lógica de la API
 │   ├── main.py             # App FastAPI + registro de routers
 │   ├── dependencies.py     # Instancias compartidas (client, parser, managers)
@@ -230,13 +281,15 @@ BCNExtractor/
 │   ├── metadata.py         # MetadataManager — tabla EAV normas_metadata
 │   ├── norms_types.py
 │   ├── downloads.py
-│   └── schedules.py        # CRUD de scheduler_jobs
+│   ├── schedules.py        # CRUD de scheduler_jobs
+│   └── nlp.py              # NLPManager — referencias, entidades y obligaciones
 ├── loaders/
 │   └── institutions.py
 ├── utils/
 │   ├── norm_parser.py
 │   ├── norm_types.py       # Norm (Pydantic), NormResponse — incluye to_parsed_data()
-│   └── db_logger.py
+│   ├── db_logger.py
+│   └── nlp.py              # Pipeline NLP: EntityRuler + NER + dependencias sintácticas
 └── data/
     ├── instituciones.csv
     └── xml/
