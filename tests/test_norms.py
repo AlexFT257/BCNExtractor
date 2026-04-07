@@ -15,6 +15,7 @@ test_norm_id = 271391
 test_query = "minis"
 test_date_start = date(2000, 1, 1)
 test_date_end = date(2010, 1, 1)
+test_id_version = 1
 
 
 def test_get_by_id(id: int = test_norm_id):
@@ -134,3 +135,23 @@ def test_get_stats():
     assert stats.get("total")
     assert stats.get("vigentes")
     assert stats.get("derogadas")
+
+
+def test_get_versiones(id_norma: int = test_norm_id):
+    versions = norm_manager.get_versiones(id_norma=id_norma)
+
+    assert isinstance(versions, List)
+    assert len(versions) > 0
+    for version in versions:
+        assert version.get("version_num")
+        assert version.get("hash_xml")
+        assert version.get("detectado_en")
+
+
+def test_get_version(id_norma: int = test_norm_id, version_num: int = test_id_version):
+    version = norm_manager.get_version(id_norma=id_norma, version_num=version_num)
+
+    assert version
+    assert version.get("version_num")
+    assert version.get("hash_xml")
+    assert version.get("detectado_en")
