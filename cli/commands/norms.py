@@ -4,6 +4,8 @@ Comandos relacionados con normas:
   bcn normas get <id>
   bcn normas sync <institucion>
   bcn normas search <query>
+  bcn normas metadata <id>
+  bcn normas by-metadata <clave> <valor>
 """
 
 from pathlib import Path
@@ -123,94 +125,41 @@ def sync(
     ),
 ):
     """Sincroniza normas de una institución a la base de datos."""
-    from bcn_client import BCNClient
-    from utils.norm_parser import BCNXMLParser
+    from services.sync import sync_institucion
 
-    client = BCNClient()
-    parser = BCNXMLParser()
     managers = require_managers()
 
-    inst_mgr = managers["instituciones"]
-    tipos_mgr = managers["tipos"]
-    norms_mgr = managers["normas"]
-    logger = managers["logger"]
-
     try:
-        inst = inst_mgr.get_by_id(institucion)
+        inst = managers["instituciones"].get_by_id(institucion)
         if not inst:
             output.error(f"Institución {institucion} no encontrada en la DB.")
             raise typer.Exit(1)
 
-        console.print(f"\nSincronizando [bold cyan]{inst.nombre}[/bold cyan]")
+        console.print(f"\nSincronizando [bold cyan]{inst.nombre}[/bold cyan]\n")
 
-        normas = client.get_normas_por_institucion(institucion)
-        if not normas:
-            output.error("No se pudo obtener la lista de normas.")
-            raise typer.Exit(1)
+        def on_progress(procesadas: int, total: int, id_norma: int, resultado: str) -> None:
+            output.print_sync_progress(procesadas, total, id_norma, resultado)
 
-        total_disponibles = len(normas)
-        if limit:
-            normas = normas[:limit]
+        def on_log(msg: str) -> None:
+            # El servicio puede emitir mensajes con markup Rich — la CLI los ignora
+            # excepto los de error/warning que output.py ya maneja via on_progress
+            pass
 
-        output.info(
-            f"{total_disponibles} normas disponibles — procesando {len(normas)}\n"
+        stats = sync_institucion(
+            inst_id=institucion,
+            managers=managers,
+            limit=limit,
+            force=force,
+            on_progress=on_progress,
+            on_log=on_log,
         )
 
-        # Tipos en batch
-        tipos_unicos = {
-            n["id_tipo"]: {
-                "id": n["id_tipo"],
-                "nombre": n["tipo"],
-                "abreviatura": n["abreviatura"],
-            }
-            for n in normas
-            if n.get("id_tipo") and n.get("tipo")
-        }
-        if tipos_unicos:
-            tipos_mgr.add_batch(list(tipos_unicos.values()))
-
-        stats = {"nuevas": 0, "actualizadas": 0, "sin_cambios": 0, "errores": 0}
-
-        for i, norma_info in enumerate(normas, 1):
-            id_norma = norma_info["id"]
-            try:
-                xml = client.get_norma_completa(id_norma)
-                if not xml:
-                    output.print_sync_error(
-                        i, len(normas), id_norma, "no se pudo descargar"
-                    )
-                    stats["errores"] += 1
-                    logger.log(id_norma, "descarga", "error", "No se pudo descargar")
-                    continue
-
-                markdown, metadata = parser.parse_from_string(xml)
-
-                result = norms_mgr.save(
-                    id_norma=id_norma,
-                    xml_content=xml,
-                    parsed_data=metadata.to_parsed_data(),
-                    id_tipo=norma_info.get("id_tipo"),
-                    id_institucion=institucion,
-                    markdown=markdown,
-                    force=force,
-                )
-
-                stats[result] = stats.get(result, 0) + 1
-                output.print_sync_progress(i, len(normas), id_norma, result)
-                logger.log(id_norma, "sincronizacion", "exitosa")
-
-            except Exception as e:
-                output.print_sync_error(i, len(normas), id_norma, str(e))
-                stats["errores"] += 1
-                logger.log(id_norma, "sincronizacion", "error", str(e))
-
-        output.print_sync_summary(stats, len(normas))
+        output.print_sync_summary(stats.as_dict(), stats.total_procesadas)
 
     except Exception as e:
         output.error(f"Error fatal: {e}")
         raise typer.Exit(1)
     finally:
-        client.close()
         managers["conn"].close()
 
 
@@ -220,14 +169,11 @@ def search(
     limit: int = typer.Option(20, "--limit", "-n", help="Máximo de resultados"),
 ):
     """Busca normas en la base de datos local (full-text search)."""
-    from managers.norms import NormsManager
-
     managers = require_managers()
-    norms_mgr = managers["normas"]
 
     try:
         console.print(f"\nBuscando: [bold]'{query}'[/bold]\n")
-        results = norms_mgr.search(query, limit=limit)
+        results = managers["normas"].search(query, limit=limit)
         output.print_search_results(results)
     except Exception as e:
         output.error(str(e))
@@ -242,10 +188,9 @@ def get_metadata(
 ):
     """Muestra la metadata de una norma específica."""
     managers = require_managers()
-    meta_mgr = managers["metadata"]
 
     try:
-        metadata = meta_mgr.get_by_norma(id)
+        metadata = managers["metadata"].get_by_norma(id)
         output.print_norma_metadata(id, metadata)
     except Exception as e:
         output.error(str(e))
@@ -263,13 +208,12 @@ def by_metadata(
 ):
     """Busca normas filtrando por una clave y valor de metadata."""
     managers = require_managers()
-    meta_mgr = managers["metadata"]
 
     try:
         console.print(
             f"\nBuscando normas con [bold]{clave}[/bold] = '[bold cyan]{valor}[/bold cyan]'\n"
         )
-        results = meta_mgr.get_normas_by_clave_valor(
+        results = managers["metadata"].get_normas_by_clave_valor(
             clave=clave, valor=valor, limit=limit, offset=offset
         )
         output.print_search_results(results)

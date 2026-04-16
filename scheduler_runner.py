@@ -1,9 +1,6 @@
 """
 Proceso independiente que ejecuta el APScheduler.
 No se invoca directamente — lo lanza 'cli/commands/scheduler.py' via subprocess.
-
-Uso interno:
-    python scheduler_runner.py '{"inst_ids": [17, 42], "hora": 23, "minuto": 59, "limite": 200, "espaciado": 0}'
 """
 
 import json
@@ -17,13 +14,12 @@ from apscheduler.schedulers.blocking import BlockingScheduler
 from apscheduler.triggers.cron import CronTrigger
 from dotenv import load_dotenv
 
-from bcn_client import BCNClient
-from managers.schedules import SchedulesManager
-from managers.norms import NormsManager
-from managers.institutions import InstitutionManager
-from managers.norms_types import TiposNormasManager
 from managers.downloads import DownloadManager
-from utils.norm_parser import BCNXMLParser
+from managers.institutions import InstitutionManager
+from managers.metadata import MetadataManager
+from managers.norms import NormsManager
+from managers.norms_types import TiposNormasManager
+from managers.schedules import SchedulesManager
 
 load_dotenv()
 
@@ -35,9 +31,8 @@ logging.basicConfig(
 logger = logging.getLogger("scheduler_runner")
 
 
-
 def _build_managers() -> dict:
-    """Inicializa todos los managers con conexiones propias."""
+    """Inicializa managers con una conexión compartida para el proceso scheduler."""
     import psycopg2
 
     conn = psycopg2.connect(
@@ -52,86 +47,44 @@ def _build_managers() -> dict:
         "instituciones": InstitutionManager(conn),
         "tipos":         TiposNormasManager(conn),
         "normas":        NormsManager(db_connection=conn),
+        "metadata":      MetadataManager(db_connection=conn),
         "logger":        DownloadManager(conn),
     }
 
 
 def _make_sync_job(inst_id: int, limite: int, managers: dict):
     """Devuelve la función de sync para un inst_id dado."""
+    from services.sync import sync_institucion
 
     def job() -> None:
-        client = BCNClient()
-        parser = BCNXMLParser()
+        job_logger = logging.getLogger(f"scheduler_runner.sync_{inst_id}")
 
-        inst_mgr = managers["instituciones"]
-        tipos_mgr = managers["tipos"]
-        norms_mgr = managers["normas"]
-        db_logger = managers["logger"]
+        def on_log(msg: str) -> None:
+            # Quitar markup Rich antes de escribir al logger de archivo
+            clean = msg.replace("[/]", "").replace("[red]", "").replace("[green]", "")
+            clean = clean.replace("[cyan]", "").replace("[yellow]", "").replace("[dim]", "")
+            job_logger.info(clean)
 
-        try:
-            normas = client.get_normas_por_institucion(inst_id)
-            if not normas:
-                logger.warning(f"[sync_{inst_id}] Sin normas disponibles.")
-                return
+        stats = sync_institucion(
+            inst_id=inst_id,
+            managers=managers,
+            limit=limite,
+            on_log=on_log,
+        )
 
-            normas = normas[:limite]
-
-            tipos_unicos = {
-                n["id_tipo"]: {
-                    "id": n["id_tipo"],
-                    "nombre": n["tipo"],
-                    "abreviatura": n["abreviatura"],
-                }
-                for n in normas
-                if n.get("id_tipo") and n.get("tipo")
-            }
-            if tipos_unicos:
-                tipos_mgr.add_batch(list(tipos_unicos.values()))
-
-            for norma_info in normas:
-                id_norma = norma_info["id"]
-                try:
-                    xml = client.get_norma_completa(id_norma)
-                    if not xml:
-                        db_logger.log(id_norma, "descarga", "error", "No se pudo descargar")
-                        continue
-
-                    markdown, metadata = parser.parse_from_string(xml)
-                    parsed_data = {
-                        "numero":             metadata.numero,
-                        "titulo":             metadata.titulo,
-                        "estado":             "derogada" if metadata.derogado else "vigente",
-                        "fecha_publicacion":  metadata.fecha_publicacion,
-                        "fecha_promulgacion": metadata.fecha_promulgacion,
-                        "organismo":          metadata.organismos[0] if metadata.organismos else None,
-                        "materias":           metadata.materias,
-                        "organismos":         metadata.organismos,
-                    }
-
-                    norms_mgr.save(
-                        id_norma=id_norma,
-                        xml_content=xml,
-                        parsed_data=parsed_data,
-                        id_tipo=norma_info.get("id_tipo"),
-                        id_institucion=inst_id,
-                        markdown=markdown,
-                        force=False,
-                    )
-                    db_logger.log(id_norma, "sincronizacion", "exitosa")
-
-                except Exception as e:
-                    logger.error(f"[sync_{inst_id}] Error en norma {id_norma}: {e}")
-                    db_logger.log(id_norma, "sincronizacion", "error", str(e))
-
-        except Exception as e:
-            logger.error(f"[sync_{inst_id}] Error fatal: {e}")
-        finally:
-            client.close()
+        job_logger.info(f"Sync finalizado: {stats.resumen()}")
 
     return job
 
 
-def main(inst_ids: list[int], hora: int, minuto: int, limite: int, espaciado: int, dia: Optional[str] = None) -> None:
+def main(
+    inst_ids: list,
+    hora: int,
+    minuto: int,
+    limite: int,
+    espaciado: int,
+    dia: Optional[str] = None,
+) -> None:
     managers = _build_managers()
     schedules_mgr = SchedulesManager(managers["conn"])
 
@@ -147,7 +100,7 @@ def main(inst_ids: list[int], hora: int, minuto: int, limite: int, espaciado: in
             schedules_mgr.update_run(nombre, "ok")
 
     scheduler.add_listener(listener, EVENT_JOB_EXECUTED | EVENT_JOB_ERROR)
-
+    nombre = ""
     for i, inst_id in enumerate(inst_ids):
         total_minutos = minuto + i * espaciado
         h = (hora + total_minutos // 60) % 24
@@ -177,8 +130,12 @@ def main(inst_ids: list[int], hora: int, minuto: int, limite: int, espaciado: in
         scheduler.start()
     except (KeyboardInterrupt, SystemExit):
         logger.info("Scheduler detenido.")
+        if nombre:
+            schedules_mgr.update_run(nombre, "stopped", "User stopped")
     finally:
         managers["conn"].close()
+        if nombre:
+            schedules_mgr.update_run(nombre, "completed")
 
 
 if __name__ == "__main__":

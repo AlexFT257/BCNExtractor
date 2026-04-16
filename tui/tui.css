@@ -227,3 +227,65 @@ ReaderModal {
     layout: horizontal;
     height: auto;
 }
+
+/* ── MetadataTab ─────────────────────────────────────────────────────────── */
+
+#clave-radioset {
+    background: #141720;
+    border: tall #2a3050;
+    margin: 0 1 1 1;
+    height: auto;
+    width: 1fr;
+}
+#clave-radioset:focus-within {
+    border: tall #4f7cff;
+}
+.field-label {
+    color: #5a6380;
+    padding: 1 1 0 1;
+    height: 2;
+}
+#meta-valor {
+    border: tall #2a3050;
+    background: #1a1e2e;
+    color: #c8d0e8;
+    margin: 0 1 1 1;
+    height: 3;
+}
+#meta-valor:focus {
+    border: tall #4f7cff;
+}
+#btn-meta-buscar {
+    margin: 0 1;
+    width: 1fr;
+}
+
+/* ── NLPTab ──────────────────────────────────────────────────────────────── */
+
+#nlp-header {
+    height: 3;
+    background: #141720;
+    border-bottom: tall #2a3050;
+    padding: 0 2;
+    content-align: left middle;
+}
+#nlp-norm-label {
+    color: #5a6380;
+    content-align: left middle;
+    height: 3;
+}
+#nlp-tabs {
+    height: 1fr;
+}
+#nlp-obl-body {
+    padding: 1 2;
+}
+
+/* ── SchedulesTab ────────────────────────────────────────────────────────── */
+
+#sched-label {
+    color: white;
+    text-style: bold;
+    width: 1fr;
+    content-align: left middle;
+}

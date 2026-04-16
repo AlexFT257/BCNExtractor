@@ -133,7 +133,7 @@ class MetadataManager:
         cursor = self.conn.cursor()
         cursor.execute(
             f"""
-            SELECT n.id, tn.nombre, n.numero, n.titulo, n.estado, n.fecha_publicacion
+            SELECT DISTINCT ON (n.id) n.id, tn.nombre, n.numero, n.titulo, n.estado, n.fecha_publicacion
             FROM normas n
             LEFT JOIN tipos_normas tn ON n.id_tipo = tn.id
             JOIN {self.table_name} m ON n.id = m.id_norma

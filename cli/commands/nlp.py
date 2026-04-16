@@ -106,8 +106,12 @@ def analizar_institucion(
 
         # Filtrar las que ya tienen análisis salvo que se fuerce
         if not forzar:
-            ids_con_analisis = nlp_mgr.get_ids_con_analisis()
-            normas = [n for n in normas if n.id not in ids_con_analisis]
+            ids_con_analisis = nlp_mgr.get_normas_analizadas()
+            for id in ids_con_analisis:
+                for norma in normas:
+                    if norma.get("id") == id:
+                        normas.remove(norma)
+                        break
 
         if not normas:
             output.info(
@@ -120,7 +124,9 @@ def analizar_institucion(
         stats = {"ok": 0, "errores": 0, "sin_xml": 0, "referencias": 0, "entidades": 0}
 
         for i, norma in enumerate(normas, 1):
-            id_norma = norma.id
+            id_norma = norma.get("id", None)
+            if id_norma is None:
+                continue
             try:
                 # BCNClient usa caché — no llama a la BCN si el XML ya existe localmente
                 xml = client.get_norma_completa(id_norma)

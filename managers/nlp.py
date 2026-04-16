@@ -4,7 +4,13 @@ from typing import Dict, List, Optional
 import psycopg2
 from dotenv import load_dotenv
 
-from utils.nlp import NLPAnalyzer, ResultadoNLP, EntidadNombrada, ObligacionDetectada, ReferenciaNormativa
+from utils.nlp import (
+    EntidadNombrada,
+    NLPAnalyzer,
+    ObligacionDetectada,
+    ReferenciaNormativa,
+    ResultadoNLP,
+)
 
 load_dotenv()
 
@@ -15,6 +21,7 @@ class NLPManager:
     table_referencias = "normas_referencias"
     table_entidades = "normas_entidades"
     table_obligaciones = "normas_obligaciones"
+    table_normas = "normas"
 
     def __init__(self, db_connection=None) -> None:
         self.conn = db_connection
@@ -155,10 +162,7 @@ class NLPManager:
                 (id_norma, texto, tipo, inicio, fin)
             VALUES (%s, %s, %s, %s, %s)
             """,
-            [
-                (id_norma, ent.texto, ent.tipo, ent.inicio, ent.fin)
-                for ent in entidades
-            ],
+            [(id_norma, ent.texto, ent.tipo, ent.inicio, ent.fin) for ent in entidades],
         )
 
     def _guardar_obligaciones(self, cursor, obligaciones, id_norma: int) -> None:
@@ -176,9 +180,7 @@ class NLPManager:
             ],
         )
 
-    def resolver_referencias_pendientes(
-        self, id_norma: Optional[int] = None
-    ) -> int:
+    def resolver_referencias_pendientes(self, id_norma: Optional[int] = None) -> int:
         """Intenta resolver referencias no resueltas contra la tabla normas.
 
         Si id_norma es None, procesa todas las referencias pendientes de toda la DB.
@@ -316,9 +318,7 @@ class NLPManager:
             for row in rows
         ]
 
-    def get_entidades(
-        self, id_norma: int, tipo: Optional[str] = None
-    ) -> List[Dict]:
+    def get_entidades(self, id_norma: int, tipo: Optional[str] = None) -> List[Dict]:
         """Devuelve entidades nombradas de una norma, opcionalmente filtradas por tipo."""
         cursor = self.conn.cursor()
         filtro = "AND tipo = %s" if tipo else ""
@@ -337,10 +337,7 @@ class NLPManager:
         rows = cursor.fetchall()
         cursor.close()
 
-        return [
-            {"texto": row[0], "tipo": row[1], "frecuencia": row[2]}
-            for row in rows
-        ]
+        return [{"texto": row[0], "tipo": row[1], "frecuencia": row[2]} for row in rows]
 
     def get_obligaciones(self, id_norma: int) -> List[Dict]:
         """Devuelve las obligaciones detectadas en una norma."""
@@ -362,6 +359,32 @@ class NLPManager:
                 "sujeto": row[1],
                 "verbo": row[2],
                 "plazo": row[3],
+            }
+            for row in rows
+        ]
+
+    def get_normas_analizadas(self) -> List[Dict]:
+        """Devuelve todas las normas que han sido analizadas."""
+        cursor = self.conn.cursor()
+        cursor.execute(
+            f"""
+            SELECT n.id, n.id_tipo, n.numero
+            FROM {self.table_normas} n
+            JOIN {self.table_referencias} r ON n.id = r.id_norma
+            GROUP BY n.id
+            """
+        )
+        rows = cursor.fetchall()
+        cursor.close()
+
+        if not rows:
+            return []
+
+        return [
+            {
+                "id": row[0],
+                "tipo_norma": row[1],
+                "numero": row[2],
             }
             for row in rows
         ]

@@ -12,7 +12,7 @@ import json
 import subprocess
 import sys
 from pathlib import Path
-from typing import Optional
+from typing import List, Optional
 
 import psutil
 import typer
@@ -82,7 +82,7 @@ def _read_pid() -> Optional[int]:
     """Lee el PID guardado. Retorna None si el archivo no existe."""
     if not PID_FILE.exists():
         return None
-    return int(PID_FILE.read_text().strip())
+    return int(PID_FILE.read_text().strip().split(",")[0])
 
 
 def _clear_pid() -> None:
@@ -141,7 +141,7 @@ def start(
     )
 
     proc = _launch_process([sys.executable, "scheduler_runner.py", args_json])
-    PID_FILE.write_text(str(proc.pid))
+    PID_FILE.write_text(str(proc.pid) + f",{instituciones}")
 
     output.success(f"Scheduler iniciado en background (PID {proc.pid}).")
     output.info(f"Instituciones: {', '.join(str(i) for i in ids)}")
