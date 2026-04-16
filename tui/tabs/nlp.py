@@ -193,3 +193,5 @@ class NLPTab(Vertical):
     def on_nlp_tab_norm_selected(self, message: NormSelected) -> None:
         """Responde al mensaje enviado por BCNApp cuando cambia la norma activa."""
         self.load_for_norm(message.norm_id, message.titulo)
+        
+    

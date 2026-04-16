@@ -86,6 +86,10 @@ class BCNApp(App):
     @property
     def _logs_tab(self) -> LogsTab:
         return self.query_one(LogsTab)
+        
+    @property
+    def _nlp_tab(self) -> NLPTab:
+        return self.query_one(NLPTab)
 
     # ── ACCIONES ──────────────────────────────────────────────────────────────
 

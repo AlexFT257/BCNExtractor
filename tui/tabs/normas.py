@@ -23,6 +23,8 @@ from textual.widgets import (
     Static,
 )
 
+from tui.tabs.nlp import NLPTab
+
 if TYPE_CHECKING:
     from tui.state import AppState
 
@@ -53,13 +55,9 @@ class NormasTab(Vertical):
                 with Horizontal(id="content-header"):
                     yield Label("Selecciona una institucion", id="inst-label")
                     with Horizontal(id="header-btns"):
-                        yield Button(
-                            "Sincronizar [s]", id="btn-sync", classes="ghost"
-                        )
+                        yield Button("Sincronizar [s]", id="btn-sync", classes="ghost")
                         yield Button("Leer  [r]", id="btn-read", classes="ghost")
-                yield DataTable(
-                    id="norms-table", cursor_type="row", zebra_stripes=True
-                )
+                yield DataTable(id="norms-table", cursor_type="row", zebra_stripes=True)
 
             with Vertical(id="detail-panel"):
                 yield Static("DETALLE", id="detail-header-label")
@@ -112,9 +110,7 @@ class NormasTab(Vertical):
                     Text(f"#{n['id']}", style="dim"),
                     Text(n["tipo_nombre"], style="cyan"),
                     Text(n["numero"], style="dim"),
-                    Text(
-                        n["titulo"][:52] + ("..." if len(n["titulo"]) > 52 else "")
-                    ),
+                    Text(n["titulo"][:52] + ("..." if len(n["titulo"]) > 52 else "")),
                     Text(
                         str(n["fecha_publicacion"]) if n["fecha_publicacion"] else "—",
                         style="dim",
@@ -158,7 +154,12 @@ class NormasTab(Vertical):
 
             # Notificar a NLPTab que la norma activa cambió
             from tui.tabs.nlp import NLPTab
-            self.app.post_message(NLPTab.NormSelected(n["id"], n["titulo"] or ""))
+
+            result = self.app._nlp_tab.on_nlp_tab_norm_selected(
+                NLPTab.NormSelected(n["id"], n["titulo"] or "")
+            )
+            if result is not None:
+                self.app.notify(result)
 
             est = n["estado"] or "vigente"
             lines = [
@@ -230,7 +231,5 @@ class NormasTab(Vertical):
             if not norm:
                 self.notify("Selecciona una norma primero", severity="warning")
                 return
-            
-            webbrowser.open(
-                    f"https://www.leychile.cl/Navegar?idNorma={norm['id']}"
-                )
+
+            webbrowser.open(f"https://www.leychile.cl/Navegar?idNorma={norm['id']}")

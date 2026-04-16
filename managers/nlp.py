@@ -389,7 +389,7 @@ class NLPManager:
             for row in rows
         ]
 
-    def get_stats_globales(self) -> Dict:
+    def get_stats(self) -> Dict:
         """Estadísticas globales del análisis NLP."""
         cursor = self.conn.cursor()
         stats = {}

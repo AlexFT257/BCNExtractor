@@ -132,27 +132,28 @@ class DownloadManager:
     def get_stats(self, days: int = 7) -> Dict:
         """
         Estadísticas de descargas
-
+    
         Args:
             days: Días hacia atrás
         """
+        from datetime import datetime, timedelta
+    
         cursor = self.conn.cursor()
-
         fecha_desde = datetime.now() - timedelta(days=days)
-
+    
         stats = {}
-
-        # Total
+    
+        # Total 
         cursor.execute(
             """
             SELECT COUNT(*)
             FROM descargas
             WHERE fecha_intento > %s
-        """,
+            """,
             (fecha_desde,),
         )
         stats["total"] = cursor.fetchone()[0]
-
+    
         # Por estado
         cursor.execute(
             """
@@ -160,11 +161,11 @@ class DownloadManager:
             FROM descargas
             WHERE fecha_intento > %s
             GROUP BY estado
-        """,
+            """,
             (fecha_desde,),
         )
         stats["por_estado"] = {row[0]: row[1] for row in cursor.fetchall()}
-
+    
         # Errores recientes
         cursor.execute(
             """
@@ -173,18 +174,43 @@ class DownloadManager:
             WHERE estado = 'error' AND fecha_intento > %s
             ORDER BY fecha_intento DESC
             LIMIT 10
-        """,
+            """,
             (fecha_desde,),
         )
         stats["errores_recientes"] = [
             {"id_norma": row[0], "error": row[1], "fecha": row[2]}
             for row in cursor.fetchall()
         ]
-
+    
+        # Serie temporal por día 
+        cursor.execute(
+            """
+            SELECT DATE(fecha_intento) AS dia, COUNT(*)
+            FROM descargas
+            WHERE fecha_intento > %s
+            GROUP BY dia
+            ORDER BY dia ASC
+            """,
+            (fecha_desde,),
+        )
+        rows = cursor.fetchall()
+    
+        # Normalizar: asegurar todos los días presentes (incluyendo días sin datos)
+        serie_map = {}
+        for i in range(days):
+            d = (fecha_desde + timedelta(days=i)).date()
+            serie_map[d] = 0
+    
+        for dia, cnt in rows:
+            serie_map[dia] = cnt
+    
+        # Mantener orden consistente
+        stats["por_dia"] = list(serie_map.values())
+    
         cursor.close()
         return stats
 
-    def get_by_norma(self, id_norma: int, limit: int = 10) -> List[Dict]:
+    def get_by_norma(self, id_norma: int, limit: int = 20, offset: int = 0) -> List[Dict]:
         """Obtiene historial de descargas de una norma"""
         cursor = self.conn.cursor()
 
@@ -194,9 +220,9 @@ class DownloadManager:
             FROM descargas
             WHERE id_norma = %s
             ORDER BY fecha_intento DESC
-            LIMIT %s
+            LIMIT %s OFFSET %s
         """,
-            (id_norma, limit),
+            (id_norma, limit, offset),
         )
 
         results = [
