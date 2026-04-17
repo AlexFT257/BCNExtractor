@@ -199,7 +199,7 @@ BCNClient (caché local)
 BCNXMLParser → Markdown
       |
       v
-NLPAnalyzer (utils/nlp_analyzer.py)
+NLPAnalyzer (utils/nlp.py)
   ├── EntityRuler   — referencias normativas (NORMA_REF) via patrones de token
   ├── NER           — personas, organismos, lugares (es_core_news_lg)
   └── Dependencias  — obligaciones y plazos via árbol sintáctico
