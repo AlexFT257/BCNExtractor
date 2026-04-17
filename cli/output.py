@@ -209,23 +209,29 @@ def print_scheduler_jobs(jobs: list):
         console.print("[yellow]No hay jobs registrados.[/yellow]")
         console.print("[dim]Usa 'scheduler add <inst_id>' para registrar uno.[/dim]")
         return
-
     table = Table(
         box=box.SIMPLE_HEAD,
         show_edge=False,
         highlight=True,
         header_style="bold cyan",
     )
-    table.add_column("ID",        style="dim",  width=4,  justify="right")
-    table.add_column("Inst",      style="cyan", width=6,  justify="right")
-    table.add_column("Nombre",                  width=20)
-    table.add_column("Horario",                 width=10, justify="center")
-    table.add_column("Límite",                  width=7,  justify="right")
-    table.add_column("Última ejecución",        width=18)
-    table.add_column("Estado",                  width=8,  justify="center")
-    table.add_column("Runs",                    width=5,  justify="right")
+    table.add_column("ID",                   style="dim", width=4,  justify="right")
+    table.add_column("Inst",                 style="cyan", width=6, justify="right")
+    table.add_column("Nombre",                             width=20)
+    table.add_column("Horario",                            width=10, justify="center")
+    table.add_column("Límite",                             width=7,  justify="right")
+    table.add_column("PID",                  style="dim", width=7,  justify="right")
+    table.add_column("Proceso",                            width=10, justify="center")
+    table.add_column("Última ejecución",                   width=18)
+    table.add_column("Resultado",                          width=10, justify="center")
+    table.add_column("Runs",                               width=5,  justify="right")
 
-    status_style = {
+    process_style = {
+        "running":   "[bold green]running[/bold green]",
+        "scheduled": "[cyan]scheduled[/cyan]",
+        "stopped":   "[dim]stopped[/dim]",
+    }
+    result_style = {
         "ok":    "[green]ok[/green]",
         "error": "[red]error[/red]",
     }
@@ -235,16 +241,24 @@ def print_scheduler_jobs(jobs: list):
         last_run_str = last_run.strftime("%Y-%m-%d %H:%M") if last_run else "[dim]nunca[/dim]"
 
         last_status = job.get("last_status") or "—"
-        status_str = status_style.get(last_status, f"[dim]{last_status}[/dim]")
+        result_str = result_style.get(last_status, f"[dim]{last_status}[/dim]")
+
+        status = job.get("status") or "stopped"
+        process_str = process_style.get(status, f"[dim]{status}[/dim]")
+
+        pid = job.get("pid")
+        pid_str = str(pid) if pid else "[dim]—[/dim]"
 
         table.add_row(
             str(job["id"]),
             str(job["inst_id"]),
             job.get("nombre", "—"),
-            f"{job['hora']:02d}:{job['minuto']:02d} UTC",
+            f"{job['hora']:02d}:{job['minuto']:02d}",
             str(job.get("limite", "—")),
+            pid_str,
+            process_str,
             last_run_str,
-            status_str,
+            result_str,
             str(job.get("run_count", 0)),
         )
 

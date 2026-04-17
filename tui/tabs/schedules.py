@@ -30,30 +30,28 @@ class SchedulesTab(Vertical):
         self._selected_job: Optional[dict] = None
 
     def compose(self) -> ComposeResult:
-        with Vertical(id="content-area"):
-            with Horizontal(id="content-header"):
-                yield Label("Jobs registrados", id="sched-label")
-                with Horizontal(id="header-btns"):
-                    yield Button("Refrescar", id="btn-sched-refresh", classes="ghost")
-                    yield Button(
-                        "Sync ahora", id="btn-sched-run", classes="ghost"
-                    )
-            yield DataTable(
-                id="sched-table", cursor_type="row", zebra_stripes=True
-            )
+        with Horizontal(id="content-area"):
+            with Vertical(id="sched-panel"):
+                with Horizontal(id="content-header"):
+                    yield Label("Jobs registrados", id="sched-label")
+                    with Horizontal(id="header-btns"):
+                        yield Button("Refrescar", id="btn-sched-refresh", classes="ghost")
+                        yield Button("Sync ahora", id="btn-sched-run", classes="ghost")
+                yield DataTable(
+                    id="sched-table", cursor_type="row", zebra_stripes=True
+                )
 
-        with Vertical(id="detail-panel"):
-            yield Static("DETALLE", id="detail-header-label")
-            with ScrollableContainer(id="detail-scroll"):
-                yield Static("Selecciona un job", id="sched-detail-body")
+            with Vertical(id="detail-panel"):
+                yield Static("DETALLE", id="detail-header-label")
+                with ScrollableContainer(id="detail-scroll"):
+                    yield Static("Selecciona un job", id="sched-detail-body")
 
     def on_mount(self) -> None:
         self.query_one("#sched-table", DataTable).add_columns(
-            "Job", "Institución", "Horario", "Último run", "Estado", "Ejecuciones"
+            "Job", "Inst", "Horario", "PID", "Proceso", "Último run", "Resultado", "Runs"
         )
         self.load()
 
-    # ── CARGA ─────────────────────────────────────────────────────────────────
 
     def load(self) -> None:
         """Recarga todos los jobs desde la DB."""
@@ -71,12 +69,24 @@ class SchedulesTab(Vertical):
         table.clear()
 
         for job in jobs:
-            status = job.get("last_status") or "—"
-            status_text = Text(status)
-            if status == "ok":
-                status_text = Text("✓ ok", style="green")
-            elif status == "error":
-                status_text = Text("✗ error", style="red")
+            last_status = job.get("last_status") or "—"
+            if last_status == "ok":
+                result_text = Text("✓ ok", style="green")
+            elif last_status == "error":
+                result_text = Text("✗ error", style="red")
+            else:
+                result_text = Text(last_status, style="dim")
+
+            status = job.get("status") or "stopped"
+            if status == "running":
+                process_text = Text("● running", style="bold green")
+            elif status == "scheduled":
+                process_text = Text("◌ scheduled", style="cyan")
+            else:
+                process_text = Text("○ stopped", style="dim")
+
+            pid = job.get("pid")
+            pid_text = Text(str(pid), style="dim") if pid else Text("—", style="dim")
 
             last_run = job.get("last_run")
             last_run_str = last_run.strftime("%Y-%m-%d %H:%M") if last_run else "nunca"
@@ -84,14 +94,14 @@ class SchedulesTab(Vertical):
             table.add_row(
                 Text(job["nombre"], style="cyan"),
                 Text(str(job["inst_id"]), style="dim"),
-                Text(f"{job['hora']:02d}:{job['minuto']:02d} UTC"),
+                Text(f"{job['hora']:02d}:{job['minuto']:02d}"),
+                pid_text,
+                process_text,
                 Text(last_run_str, style="dim"),
-                status_text,
+                result_text,
                 Text(str(job.get("run_count", 0)), style="dim"),
                 key=str(job["id"]),
             )
-
-    # ── DETALLE ───────────────────────────────────────────────────────────────
 
     def _show_job_detail(self, job_id: int) -> None:
         try:
@@ -102,28 +112,44 @@ class SchedulesTab(Vertical):
             self._selected_job = job
 
             last_run = job.get("last_run")
-            last_run_str = last_run.strftime("%Y-%m-%d %H:%M UTC") if last_run else "nunca"
+            last_run_str = last_run.strftime("%Y-%m-%d %H:%M") if last_run else "nunca"
             created = job.get("created_at")
-            created_str = created.strftime("%Y-%m-%d %H:%M UTC") if created else "—"
+            created_str = created.strftime("%Y-%m-%d %H:%M") if created else "—"
 
-            status = job.get("last_status") or "—"
-            status_fmt = (
-                "[green]✓ ok[/green]" if status == "ok"
-                else "[red]✗ error[/red]" if status == "error"
-                else f"[dim]{status}[/dim]"
+            # Estado del proceso
+            status = job.get("status") or "stopped"
+            if status == "running":
+                status_fmt = "[bold green]● running[/bold green]"
+            elif status == "scheduled":
+                status_fmt = "[cyan]◌ scheduled[/cyan]"
+            else:
+                status_fmt = "[dim]○ stopped[/dim]"
+
+            # Resultado de la última ejecución
+            last_status = job.get("last_status") or "—"
+            result_fmt = (
+                "[green]✓ ok[/green]" if last_status == "ok"
+                else "[red]✗ error[/red]" if last_status == "error"
+                else f"[dim]{last_status}[/dim]"
             )
+
+            pid = job.get("pid")
+            pid_str = str(pid) if pid else "—"
 
             lines = [
                 f"[bold white]{job['nombre']}[/bold white]\n",
-                f"[dim]ID[/dim]           {job['id']}",
-                f"[dim]Institución[/dim]  #{job['inst_id']}",
-                f"[dim]Horario[/dim]      {job['hora']:02d}:{job['minuto']:02d} UTC diario",
+                f"[dim]ID[/dim]            {job['id']}",
+                f"[dim]Institución[/dim]   #{job['inst_id']}",
+                f"[dim]Horario[/dim]       {job['hora']:02d}:{job['minuto']:02d} diario",
                 f"[dim]Límite normas[/dim] {job['limite']}",
-                f"[dim]Creado[/dim]       {created_str}",
+                f"[dim]Creado[/dim]        {created_str}",
                 "",
-                f"[dim]Último run[/dim]   {last_run_str}",
-                f"[dim]Estado[/dim]       {status_fmt}",
-                f"[dim]Ejecuciones[/dim]  {job.get('run_count', 0)}",
+                f"[dim]PID[/dim]           {pid_str}",
+                f"[dim]Proceso[/dim]       {status_fmt}",
+                "",
+                f"[dim]Último run[/dim]    {last_run_str}",
+                f"[dim]Resultado[/dim]     {result_fmt}",
+                f"[dim]Ejecuciones[/dim]   {job.get('run_count', 0)}",
             ]
 
             if job.get("last_error"):
@@ -138,8 +164,6 @@ class SchedulesTab(Vertical):
         except Exception as e:
             self.app.notify(f"Error cargando detalle: {e}", severity="error")
 
-    # ── SYNC INMEDIATO ────────────────────────────────────────────────────────
-
     def _run_selected_now(self) -> None:
         """Ejecuta el sync del job seleccionado abriendo SyncModal."""
         if not self._selected_job:
@@ -152,8 +176,6 @@ class SchedulesTab(Vertical):
         nombre = self._selected_job["nombre"]
         limite = self._selected_job.get("limite")
         self.app.push_screen(SyncModal(inst_id, nombre, limit=limite))
-
-    # ── EVENTOS ───────────────────────────────────────────────────────────────
 
     def on_button_pressed(self, event: Button.Pressed) -> None:
         if event.button.id == "btn-sched-refresh":
