@@ -210,9 +210,7 @@ _ETIQUETAS_NER = {
     "ORG": "organismo",
     "PER": "persona",
     "LOC": "lugar",
-    "GPE": "lugar",
-    "DATE": "fecha",
-    "MISC": "otro",
+    "GPE": "lugar"
 }
 
 
@@ -407,9 +405,9 @@ class NLPAnalyzer:
     def _extraer_entidades(self, doc) -> List[EntidadNombrada]:
         entidades = []
         for ent in doc.ents:
-            if ent.label_ == "NORMA_REF":
-                continue
             tipo = _ETIQUETAS_NER.get(ent.label_, "otro")
+            if tipo == "otro":
+                continue
             texto = ent.text.strip()
             if len(texto) < 3 or texto.isdigit():
                 continue

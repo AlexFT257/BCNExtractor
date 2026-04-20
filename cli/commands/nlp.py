@@ -7,9 +7,10 @@ Comandos de análisis NLP:
   bcn nlp entidades <id>
   bcn nlp obligaciones <id>
   bcn nlp stats
+  bcn nlp eliminar <id>
 """
 
-from typing import Optional
+from typing import List, Optional
 
 import typer
 
@@ -18,6 +19,8 @@ from cli._internal import require_managers
 from cli.console import console
 
 app = typer.Typer(help="Análisis NLP de normas legales")
+
+_TABLAS_VALIDAS = ("referencias", "entidades", "obligaciones")
 
 
 @app.command("analizar")
@@ -97,14 +100,12 @@ def analizar_institucion(
 
         console.print(f"\nAnalizando NLP — [bold cyan]{inst.nombre}[/bold cyan]")
 
-        # Trae las normas registradas en DB para esta institución
         normas = norms_mgr.get_by_institucion(id_institucion=institucion, limit=limit)
 
         if not normas:
             output.warning("No hay normas sincronizadas para esta institución.")
             raise typer.Exit(0)
 
-        # Filtrar las que ya tienen análisis salvo que se fuerce
         if not forzar:
             ids_con_analisis = nlp_mgr.get_normas_analizadas()
             for id in ids_con_analisis:
@@ -128,7 +129,6 @@ def analizar_institucion(
             if id_norma is None:
                 continue
             try:
-                # BCNClient usa caché — no llama a la BCN si el XML ya existe localmente
                 xml = client.get_norma_completa(id_norma)
                 if not xml:
                     stats["sin_xml"] += 1
@@ -293,6 +293,94 @@ def stats_nlp():
     try:
         stats = nlp_mgr.get_stats_globales()
         output.print_nlp_stats(stats)
+    except Exception as e:
+        output.error(str(e))
+        raise typer.Exit(1)
+    finally:
+        managers["conn"].close()
+
+
+@app.command("eliminar")
+def eliminar_analisis(
+    id: int = typer.Argument(..., help="ID de la norma cuyo análisis se quiere borrar"),
+    solo: Optional[List[str]] = typer.Option(
+        None,
+        "--solo",
+        "-s",
+        help=(
+            "Tablas a borrar: referencias, entidades, obligaciones. "
+            "Se puede repetir: --solo entidades --solo referencias. "
+            "Sin este flag se borra el análisis completo."
+        ),
+    ),
+    si: bool = typer.Option(
+        False,
+        "--si",
+        "-y",
+        help="Confirmar automáticamente sin preguntar.",
+    ),
+):
+    """Elimina el análisis NLP de una norma, completo o parcial.
+
+    Ejemplos:
+      bcn nlp eliminar 206396                              # borra todo
+      bcn nlp eliminar 206396 --solo entidades             # solo entidades
+      bcn nlp eliminar 206396 --solo entidades --solo referencias
+      bcn nlp eliminar 206396 --solo entidades --si        # sin confirmación
+    """
+    managers = require_managers()
+    nlp_mgr = managers["nlp"]
+
+    try:
+        # Validar nombres antes de consultar la DB
+        tablas_a_borrar = list(solo) if solo else []
+        invalidos = [t for t in tablas_a_borrar if t not in _TABLAS_VALIDAS]
+        if invalidos:
+            output.error(
+                f"Tabla(s) no válida(s): {', '.join(invalidos)}. "
+                f"Opciones: {', '.join(_TABLAS_VALIDAS)}"
+            )
+            raise typer.Exit(1)
+
+        # Mostrar cuántas filas se van a borrar por tabla
+        conteos = nlp_mgr.contar_analisis(id_norma=id)
+
+        tablas_objetivo = tablas_a_borrar if tablas_a_borrar else list(_TABLAS_VALIDAS)
+        total = sum(conteos.get(t, 0) for t in tablas_objetivo)
+
+        if total == 0:
+            output.info(f"Norma {id} no tiene datos NLP en las tablas seleccionadas.")
+            raise typer.Exit(0)
+
+        # Resumen de lo que se va a borrar
+        scope = "completo" if not tablas_a_borrar else "parcial"
+        console.print(f"\nEliminación de análisis NLP [{scope}] — norma [cyan]{id}[/cyan]\n")
+
+        for tabla in tablas_objetivo:
+            n = conteos.get(tabla, 0)
+            color = "yellow" if n > 0 else "dim"
+            console.print(f"  [{color}]{tabla:<15}[/{color}]  {n} fila(s)")
+
+        console.print(f"\n  Total: [bold red]{total}[/bold red] fila(s)\n")
+
+        # Confirmación interactiva
+        if not si:
+            confirmar = typer.confirm("¿Confirmar eliminación?", default=False)
+            if not confirmar:
+                output.info("Operación cancelada.")
+                raise typer.Exit(0)
+
+        eliminados = nlp_mgr.eliminar_analisis(
+            id_norma=id,
+            tablas=tablas_a_borrar if tablas_a_borrar else None,
+        )
+
+        for tabla, n in eliminados.items():
+            if n > 0:
+                output.success(f"{tabla}: {n} fila(s) eliminada(s).")
+
+    except typer.Exit:
+        raise
     except Exception as e:
         output.error(str(e))
         raise typer.Exit(1)

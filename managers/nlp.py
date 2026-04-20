@@ -22,6 +22,15 @@ class NLPManager:
     table_entidades = "normas_entidades"
     table_obligaciones = "normas_obligaciones"
     table_normas = "normas"
+    
+    # Tablas válidas que se pueden borrar individualmente.
+    # Usadas para validar el parámetro `tablas` en el CLI y evitar
+    # que se pase un nombre arbitrario a la query.
+    TABLAS_VALIDAS = {
+        "referencias": "normas_referencias",
+        "entidades": "normas_entidades",
+        "obligaciones": "normas_obligaciones",
+    }
 
     def __init__(self, db_connection=None) -> None:
         self.conn = db_connection
@@ -179,6 +188,76 @@ class NLPManager:
                 for obl in obligaciones
             ],
         )
+ 
+    def eliminar_analisis(
+        self,
+        id_norma: int,
+        tablas: Optional[List[str]] = None,
+    ) -> Dict[str, int]:
+        """Elimina el análisis NLP de una norma, completo o parcial.
+ 
+        Args:
+            id_norma: ID de la norma cuyo análisis se quiere borrar.
+            tablas: Lista de nombres lógicos a borrar — "referencias",
+                    "entidades" y/o "obligaciones". Si es None o lista
+                    vacía se borran las tres tablas (análisis completo).
+ 
+        Returns:
+            Dict con el número de filas eliminadas por tabla,
+            p. ej. {"referencias": 3, "entidades": 12, "obligaciones": 0}.
+ 
+        Raises:
+            ValueError: Si algún nombre en `tablas` no es válido.
+        """
+        nombres_a_borrar = list(tablas) if tablas else list(self.TABLAS_VALIDAS.keys())
+ 
+        # Validar antes de tocar la DB
+        invalidos = [n for n in nombres_a_borrar if n not in self.TABLAS_VALIDAS]
+        if invalidos:
+            raise ValueError(
+                f"Tabla(s) desconocida(s): {', '.join(invalidos)}. "
+                f"Válidas: {', '.join(self.TABLAS_VALIDAS.keys())}"
+            )
+ 
+        eliminados: Dict[str, int] = {}
+        cursor = self.conn.cursor()
+ 
+        try:
+            for nombre in nombres_a_borrar:
+                tabla = self.TABLAS_VALIDAS[nombre]
+                cursor.execute(
+                    f"DELETE FROM {tabla} WHERE id_norma = %s",
+                    (id_norma,),
+                )
+                eliminados[nombre] = cursor.rowcount
+            self.conn.commit()
+        except Exception:
+            self.conn.rollback()
+            raise
+        finally:
+            cursor.close()
+ 
+        return eliminados
+ 
+    def contar_analisis(self, id_norma: int) -> Dict[str, int]:
+        """Cuenta cuántas filas existen por tabla para una norma.
+ 
+        Útil para mostrar un resumen antes de pedir confirmación en el CLI.
+        """
+        cursor = self.conn.cursor()
+        conteos: Dict[str, int] = {}
+ 
+        try:
+            for nombre, tabla in self.TABLAS_VALIDAS.items():
+                cursor.execute(
+                    f"SELECT COUNT(*) FROM {tabla} WHERE id_norma = %s",
+                    (id_norma,),
+                )
+                conteos[nombre] = cursor.fetchone()[0]
+        finally:
+            cursor.close()
+ 
+        return conteos
 
     def resolver_referencias_pendientes(self, id_norma: Optional[int] = None) -> int:
         """Intenta resolver referencias no resueltas contra la tabla normas.
