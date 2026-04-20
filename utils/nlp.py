@@ -25,10 +25,7 @@ import spacy
 from spacy.language import Language
 from spacy.pipeline import EntityRuler
 
-# ---------------------------------------------------------------------------
 # Tipos de datos de salida
-# ---------------------------------------------------------------------------
-
 
 @dataclass
 class ReferenciaNormativa:
@@ -135,9 +132,7 @@ def _construir_patrones() -> List[Dict]:
     return patrones
 
 
-# ---------------------------------------------------------------------------
 # Referencias por nombre conocido (sin número explícito en el texto)
-# ---------------------------------------------------------------------------
 
 _REFERENCIAS_POR_NOMBRE = [
     ("Ley sobre Bases Generales del Medio Ambiente", "ley", "19300"),
@@ -154,9 +149,7 @@ _PAT_NOMBRES_COMPILADOS = [
 ]
 
 
-# ---------------------------------------------------------------------------
 # Verbos de obligación
-# ---------------------------------------------------------------------------
 
 _VERBOS_OBLIGACION = {
     "deberá",
@@ -202,9 +195,7 @@ _PATRONES_PLAZO = [
 ]
 
 
-# ---------------------------------------------------------------------------
 # Etiquetas NER → tipos internos
-# ---------------------------------------------------------------------------
 
 _ETIQUETAS_NER = {
     "ORG": "organismo",
@@ -214,9 +205,7 @@ _ETIQUETAS_NER = {
 }
 
 
-# ---------------------------------------------------------------------------
 # Materias por keywords
-# ---------------------------------------------------------------------------
 
 _MATERIAS_KEYWORDS: Dict[str, List[str]] = {
     "medio_ambiente": [
@@ -282,9 +271,7 @@ _MATERIAS_KEYWORDS: Dict[str, List[str]] = {
 }
 
 
-# ---------------------------------------------------------------------------
 # Pipeline singleton
-# ---------------------------------------------------------------------------
 
 _NLP: Optional[Language] = None
 
@@ -304,9 +291,7 @@ def _get_nlp() -> Language:
     return _NLP
 
 
-# ---------------------------------------------------------------------------
 # Analizador público
-# ---------------------------------------------------------------------------
 
 
 class NLPAnalyzer:
@@ -325,9 +310,7 @@ class NLPAnalyzer:
         resultado.materias_detectadas = self._detectar_materias(texto_limpio)
         return resultado
 
-    # ------------------------------------------------------------------
     # Referencias normativas
-    # ------------------------------------------------------------------
 
     def _extraer_referencias(self, doc, texto_limpio: str) -> List[ReferenciaNormativa]:
         referencias: List[ReferenciaNormativa] = []
@@ -398,10 +381,8 @@ class NLPAnalyzer:
         )
         return m.group(1).strip() if m else None
 
-    # ------------------------------------------------------------------
     # Entidades NER estadísticas
-    # ------------------------------------------------------------------
-
+    
     def _extraer_entidades(self, doc) -> List[EntidadNombrada]:
         entidades = []
         for ent in doc.ents:
@@ -421,9 +402,7 @@ class NLPAnalyzer:
             )
         return entidades
 
-    # ------------------------------------------------------------------
     # Obligaciones
-    # ------------------------------------------------------------------
 
     def _extraer_obligaciones(self, doc) -> List[ObligacionDetectada]:
         obligaciones = []
@@ -455,9 +434,7 @@ class NLPAnalyzer:
                 return m.group(1).strip()
         return None
 
-    # ------------------------------------------------------------------
     # Materias
-    # ------------------------------------------------------------------
 
     def _detectar_materias(self, texto: str) -> List[str]:
         texto_lower = texto.lower()
@@ -475,9 +452,7 @@ class NLPAnalyzer:
             if s >= umbral
         ]
 
-    # ------------------------------------------------------------------
     # Limpieza de Markdown
-    # ------------------------------------------------------------------
 
     def _limpiar_markdown(self, texto: str) -> str:
         texto = re.sub(r"^#{1,6}\s+", "", texto, flags=re.MULTILINE)
