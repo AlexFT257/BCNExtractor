@@ -107,12 +107,12 @@ class NLPManager:
         self.conn.commit()
         cursor.close()
 
-    def analizar_y_guardar(self, id_norma: int, texto_markdown: str) -> ResultadoNLP:
+    def analizar_y_guardar(self, id_norma: int, texto_markdown: str, usar_llm: bool = False) -> ResultadoNLP:
         """Analiza una norma y persiste todos los resultados NLP.
 
         Reemplaza cualquier análisis previo de la misma norma.
         """
-        resultado = self.analyzer.analizar(id_norma, texto_markdown)
+        resultado = self.analyzer.analizar(id_norma, texto_markdown,usar_llm)
         cursor = self.conn.cursor()
 
         try:

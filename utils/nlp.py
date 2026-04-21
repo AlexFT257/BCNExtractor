@@ -1,5 +1,5 @@
 """
-utils/nlp_analyzer.py
+utils/nlp.py
 
 Pipeline NLP para normas legales chilenas basado en spaCy.
 
@@ -25,6 +25,8 @@ import spacy
 from spacy.language import Language
 from spacy.pipeline import EntityRuler
 
+from utils.nlp_llm import NLPLLM
+
 # Tipos de datos de salida
 
 @dataclass
@@ -44,7 +46,7 @@ class EntidadNombrada:
     """Entidad nombrada detectada por el NER estadístico."""
 
     texto: str
-    tipo: str  # "organismo" | "persona" | "lugar" | "fecha" | "monto"
+    tipo: str  # "organismo" | "persona" | "lugar"
     inicio: int  # char offset en el texto limpio
     fin: int
 
@@ -274,6 +276,7 @@ _MATERIAS_KEYWORDS: Dict[str, List[str]] = {
 # Pipeline singleton
 
 _NLP: Optional[Language] = None
+_LLM: Optional[NLPLLM] = None
 
 
 def _get_nlp() -> Language:
@@ -291,56 +294,125 @@ def _get_nlp() -> Language:
     return _NLP
 
 
+def _get_llm() -> NLPLLM:
+    global _LLM
+    if _LLM is not None:
+        return _LLM
+    _LLM = NLPLLM()
+    return _LLM
+
+
 # Analizador público
 
 
 class NLPAnalyzer:
     """Extrae referencias, entidades y obligaciones de normas legales chilenas."""
 
-    def analizar(self, id_norma: int, texto: str) -> ResultadoNLP:
+    def analizar(self, id_norma: int, texto: str, llm: Optional[bool]=False) -> ResultadoNLP:
         """Analiza el texto Markdown de una norma y retorna ResultadoNLP."""
         texto_limpio = self._limpiar_markdown(texto)
         nlp = _get_nlp()
-        doc = nlp(texto_limpio[:900_000])
+        
 
         resultado = ResultadoNLP(id_norma=id_norma)
-        resultado.referencias = self._extraer_referencias(doc, texto_limpio)
-        resultado.entidades = self._extraer_entidades(doc)
-        resultado.obligaciones = self._extraer_obligaciones(doc)
+        resultado.referencias = self._extraer_referencias(texto_limpio, nlp)
+
+        if llm:
+            nlp_llm = _get_llm()
+            entidades = self._extraer_entidades_llm(texto, nlp_llm)
+            resultado.entidades = entidades
+        else:
+            resultado.entidades = self._extraer_entidades(texto, nlp)
+        
+        resultado.obligaciones = self._extraer_obligaciones(texto_limpio, nlp)
         resultado.materias_detectadas = self._detectar_materias(texto_limpio)
         return resultado
 
+    # ---------------------------------------------------------------------------
+    # Segmentación por secciones Markdown
+    #
+    # El BCNXMLParser produce secciones delimitadas por encabezados ## (nivel 2):
+    # cada artículo, encabezado legal, promulgación y anexo abre un bloque ##.
+    # Procesamos sección a sección en lugar del documento completo para que
+    # el NER reciba ventanas de contexto más acotadas, lo que reduce falsos
+    # positivos especialmente en normas largas.
+    #
+    # Secciones descartadas: "Información Básica" — contiene metadatos
+    # estructurados (tipo, número, fechas, organismos, materias) que ya se
+    # extraen del XML y que confunden al NER con entidades fuera de contexto.
+    # ---------------------------------------------------------------------------
+
+    _SECCIONES_EXCLUIDAS = {"informacion basica"}
+
+    def _segmentar_por_secciones(self, texto: str) -> List[str]:
+        """
+        Divide el Markdown en bloques por encabezado de nivel 2 (##).
+
+        Cada bloque incluye su encabezado ## y todo el contenido que le sigue
+        hasta el próximo ##, preservando sub-secciones ### y #### intactas.
+        """
+        bloques_raw = re.split(r"(?m)^(?=### )", texto)
+
+        secciones = []
+        for bloque in bloques_raw:
+            bloque = bloque.strip()
+            if not bloque:
+                continue
+
+            # Comparar título normalizado (sin tildes) contra la lista de exclusión
+            m = re.match(r"^##\s+(.+)", bloque)
+            if m:
+                titulo = m.group(1).strip().lower()
+                titulo_norm = (
+                    titulo
+                    .replace("ó", "o").replace("á", "a")
+                    .replace("é", "e").replace("í", "i").replace("ú", "u")
+                )
+                if titulo_norm in self._SECCIONES_EXCLUIDAS:
+                    continue
+
+            # Descartar bloques sin contenido útil tras el encabezado
+            contenido = re.sub(r"^##[^\n]*\n?", "", bloque).strip()
+            if len(contenido) < 20:
+                continue
+
+            secciones.append(bloque)
+
+        return secciones
+
     # Referencias normativas
 
-    def _extraer_referencias(self, doc, texto_limpio: str) -> List[ReferenciaNormativa]:
+    def _extraer_referencias(self, texto_limpio: str, nlp: Language) -> List[ReferenciaNormativa]:
         referencias: List[ReferenciaNormativa] = []
         vistas: set = set()
 
-        for ent in doc.ents:
-            if ent.label_ != "NORMA_REF":
-                continue
+        for seccion in self._segmentar_por_secciones(texto_limpio):
+            doc = nlp(seccion[:900_000])
+            for ent in doc.ents:
+                if ent.label_ != "NORMA_REF":
+                    continue
 
-            tipo = ent.ent_id_ or "desconocido"
-            numero = self._numero_del_span(ent)
-            anio = self._anio_siguiente(doc, ent)
-            org = self._organismo_siguiente(doc, ent)
+                tipo = ent.ent_id_ or "desconocido"
+                numero = self._numero_del_span(ent)
+                anio = self._anio_siguiente(doc, ent)
+                org = self._organismo_siguiente(doc, ent)
 
-            clave = (tipo, numero)
-            if clave in vistas:
-                continue
-            vistas.add(clave)
+                clave = (tipo, numero)
+                if clave in vistas:
+                    continue
+                vistas.add(clave)
 
-            referencias.append(
-                ReferenciaNormativa(
-                    tipo_norma=tipo,
-                    numero=numero,
-                    anio=anio,
-                    organismo=org,
-                    texto_original=ent.text,
+                referencias.append(
+                    ReferenciaNormativa(
+                        tipo_norma=tipo,
+                        numero=numero,
+                        anio=anio,
+                        organismo=org,
+                        texto_original=ent.text,
+                    )
                 )
-            )
 
-        # Nombres conocidos sin número explícito
+        # Nombres conocidos sin número explícito — sobre el texto completo
         for patron, tipo, numero in _PAT_NOMBRES_COMPILADOS:
             clave = (tipo, numero)
             if clave in vistas:
@@ -382,43 +454,106 @@ class NLPAnalyzer:
         return m.group(1).strip() if m else None
 
     # Entidades NER estadísticas
-    
-    def _extraer_entidades(self, doc) -> List[EntidadNombrada]:
+
+    def _extraer_entidades(self, texto_limpio: str, nlp: Language) -> List[EntidadNombrada]:
         entidades = []
-        for ent in doc.ents:
-            tipo = _ETIQUETAS_NER.get(ent.label_, "otro")
-            if tipo == "otro":
-                continue
-            texto = ent.text.strip()
-            if len(texto) < 3 or texto.isdigit():
-                continue
-            entidades.append(
-                EntidadNombrada(
-                    texto=texto,
-                    tipo=tipo,
-                    inicio=ent.start_char,
-                    fin=ent.end_char,
+        vistas: set = set()
+
+        for seccion in self._segmentar_por_secciones(texto_limpio):
+            doc = nlp(seccion[:900_000])
+            for ent in doc.ents:
+                tipo = _ETIQUETAS_NER.get(ent.label_, "otro")
+                if tipo == "otro":
+                    continue
+                texto = ent.text.strip()
+                if len(texto) < 3 or texto.isdigit():
+                    continue
+
+                # Deduplicar por (texto normalizado, tipo) entre secciones
+                clave = (texto.lower(), tipo)
+                if clave in vistas:
+                    continue
+                vistas.add(clave)
+
+                entidades.append(
+                    EntidadNombrada(
+                        texto=texto,
+                        tipo=tipo,
+                        inicio=ent.start_char,
+                        fin=ent.end_char,
+                    )
                 )
-            )
+
+        return entidades
+        
+    def _extraer_entidades_llm(
+        self, texto_limpio: str, llm: NLPLLM
+    ) -> List[EntidadNombrada]:
+        entidades = []
+        vistas = set()
+    
+        for seccion in self._segmentar_por_secciones(texto_limpio):
+            response = llm.generate_response(seccion[:900_000])
+    
+            if not response or "entidades" not in response:
+                continue
+    
+            for ent in response["entidades"]:
+                texto = ent.get("nombre", "").strip()
+                tipo = ent.get("tipo", "").strip().lower()
+    
+                if not texto or len(texto) < 3 or texto.isdigit():
+                    continue
+                    
+                if tipo not in ["organismo", "persona", "lugar"]:
+                    continue
+    
+                # FILTRO: excluir normas (heurística simple)
+                texto_upper = texto.upper()
+                if any(
+                    kw in texto_upper
+                    for kw in ["LEY", "D.F.L", "DFL", "DECRETO", "N°", "Nº"]
+                ):
+                    continue
+    
+                # Deduplicación global (entre secciones)
+                clave = (texto.lower(), tipo)
+                if clave in vistas:
+                    continue
+                vistas.add(clave)
+    
+                entidades.append(
+                    EntidadNombrada(
+                        texto=texto,
+                        tipo=tipo,
+                        inicio=0,
+                        fin=1,
+                    )
+                )
+    
         return entidades
 
     # Obligaciones
 
-    def _extraer_obligaciones(self, doc) -> List[ObligacionDetectada]:
+    def _extraer_obligaciones(self, texto_limpio: str, nlp: Language) -> List[ObligacionDetectada]:
         obligaciones = []
-        for sent in doc.sents:
-            sent_lower = sent.text.lower()
-            verbo = next((v for v in _VERBOS_OBLIGACION if v in sent_lower), None)
-            if not verbo:
-                continue
-            obligaciones.append(
-                ObligacionDetectada(
-                    texto_completo=sent.text.strip(),
-                    sujeto=self._extraer_sujeto(sent),
-                    verbo=verbo,
-                    plazo=self._extraer_plazo(sent.text),
+
+        for seccion in self._segmentar_por_secciones(texto_limpio):
+            doc = nlp(seccion[:900_000])
+            for sent in doc.sents:
+                sent_lower = sent.text.lower()
+                verbo = next((v for v in _VERBOS_OBLIGACION if v in sent_lower), None)
+                if not verbo:
+                    continue
+                obligaciones.append(
+                    ObligacionDetectada(
+                        texto_completo=sent.text.strip(),
+                        sujeto=self._extraer_sujeto(sent),
+                        verbo=verbo,
+                        plazo=self._extraer_plazo(sent.text),
+                    )
                 )
-            )
+
         return obligaciones
 
     def _extraer_sujeto(self, sent) -> Optional[str]:

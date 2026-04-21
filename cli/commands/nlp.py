@@ -29,6 +29,15 @@ def analizar_norma(
     forzar: bool = typer.Option(
         False, "--forzar", "-f", help="Re-analizar aunque ya tenga análisis previo"
     ),
+    llm: bool = typer.Option(
+        False,
+        "--llm",
+        help=(
+            "[Experimental] Usar Ollama para la extracción de entidades nombradas "
+            "en lugar del NER estadístico. Requiere Ollama y gemmna4 instalados y configurados."
+            "Las referencias normativas y obligaciones siguen usando reglas."
+        ),
+    ),
 ):
     """Extrae referencias, entidades y obligaciones de una norma específica."""
     from bcn_client import BCNClient
@@ -47,7 +56,17 @@ def analizar_norma(
             output.error(f"Norma {id} no encontrada en la base de datos.")
             raise typer.Exit(1)
 
-        console.print(f"\nAnalizando norma [cyan]{id}[/cyan] — {norma.get('titulo')}")
+        modo_label = "[yellow]LLM[/yellow]" if llm else "clásico"
+        console.print(
+            f"\nAnalizando norma [cyan]{id}[/cyan] — {norma.get('titulo')} "
+            f"(modo {modo_label})"
+        )
+
+        if llm:
+            output.warning(
+                "Modo LLM activo (experimental). "
+                "Asegúrate de tener Ollama y gemmna4 installado y configurado."
+            )
 
         xml = client.get_norma_completa(id)
         if not xml:
@@ -59,6 +78,7 @@ def analizar_norma(
         resultado = nlp_mgr.analizar_y_guardar(
             id_norma=id,
             texto_markdown=markdown,
+            usar_llm=llm,
         )
 
         output.print_nlp_resumen(resultado)
@@ -80,6 +100,15 @@ def analizar_institucion(
     forzar: bool = typer.Option(
         False, "--forzar", "-f", help="Re-analizar normas que ya tienen análisis"
     ),
+    llm: bool = typer.Option(
+        False,
+        "--llm",
+        help=(
+            "[Experimental] Usar Ollama para la extracción de entidades nombradas. "
+            "Se aplica a todas las normas del batch. "
+            "Requiere Ollama y gemmna4 installado "
+        ),
+    ),
 ):
     """Analiza en batch todas las normas sincronizadas de una institución."""
     from bcn_client import BCNClient
@@ -98,7 +127,17 @@ def analizar_institucion(
             output.error(f"Institución {institucion} no encontrada.")
             raise typer.Exit(1)
 
-        console.print(f"\nAnalizando NLP — [bold cyan]{inst.nombre}[/bold cyan]")
+        modo_label = "[yellow]LLM[/yellow]" if llm else "clásico"
+        console.print(
+            f"\nAnalizando NLP — [bold cyan]{inst.nombre}[/bold cyan] "
+            f"(modo {modo_label})"
+        )
+
+        if llm:
+            output.warning(
+                "Modo LLM activo (experimental). "
+                "Asegúrate de tener Ollama y gemmna4 installado y configurado."
+            )
 
         normas = norms_mgr.get_by_institucion(id_institucion=institucion, limit=limit)
 
@@ -142,6 +181,7 @@ def analizar_institucion(
                 resultado = nlp_mgr.analizar_y_guardar(
                     id_norma=id_norma,
                     texto_markdown=markdown,
+                    usar_llm=llm,
                 )
                 stats["ok"] += 1
                 stats["referencias"] += len(resultado.referencias)
@@ -354,7 +394,9 @@ def eliminar_analisis(
 
         # Resumen de lo que se va a borrar
         scope = "completo" if not tablas_a_borrar else "parcial"
-        console.print(f"\nEliminación de análisis NLP [{scope}] — norma [cyan]{id}[/cyan]\n")
+        console.print(
+            f"\nEliminación de análisis NLP [{scope}] — norma [cyan]{id}[/cyan]\n"
+        )
 
         for tabla in tablas_objetivo:
             n = conteos.get(tabla, 0)
