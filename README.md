@@ -61,6 +61,17 @@ python bcn_tui.py
 
 El sync descarga las normas de la institución activa, las procesa y las guarda en la base de datos. Al terminar muestra un resumen y habilita el botón Cerrar.
 
+#### Tab NLP (TUI)
+
+Al seleccionar una norma en el tab Normas, el tab NLP muestra su análisis completo dividido en cuatro sub-tabs:
+
+| Sub-tab | Contenido |
+|---------|-----------|
+| **Referencias** | Referencias normativas salientes (normas que esta norma cita), con tipo, número, año, organismo y estado de resolución contra la DB local |
+| **Citado por** | Grafo inverso: normas que citan a la norma seleccionada |
+| **Entidades** | Entidades nombradas detectadas por NER (organismos, personas, lugares, fechas), ordenadas por frecuencia |
+| **Obligaciones** | Oraciones con verbos de obligación o permisión, con sujeto, verbo y plazo cuando se detectan |
+
 ### CLI
 
 Los comandos están organizados en grupos. Todos los subcomandos soportan `--help`.
@@ -90,9 +101,11 @@ python bcn_cli.py instituciones load data/instituciones.csv  # Cargar desde CSV
 
 # NLP
 python bcn_cli.py nlp analizar 206396                     # Analizar una norma específica
+python bcn_cli.py nlp analizar 206396 --llm               # Analizar usando NER vía Ollama (experimental)
 python bcn_cli.py nlp analizar-institucion 17             # Analizar todas las normas de una institución
 python bcn_cli.py nlp analizar-institucion 17 --limit 50  # Limitar el batch
 python bcn_cli.py nlp analizar-institucion 17 --forzar    # Re-analizar aunque ya exista análisis
+python bcn_cli.py nlp analizar-institucion 17 --llm       # Batch con NER vía Ollama (experimental)
 python bcn_cli.py nlp resolver                            # Resolver referencias pendientes (todas)
 python bcn_cli.py nlp resolver 206396                     # Resolver referencias de una norma
 python bcn_cli.py nlp referencias 206396                  # Ver referencias extraídas
@@ -101,6 +114,10 @@ python bcn_cli.py nlp entidades 206396                    # Ver entidades nombra
 python bcn_cli.py nlp entidades 206396 --tipo organismo   # Filtrar por tipo
 python bcn_cli.py nlp obligaciones 206396                 # Ver obligaciones detectadas
 python bcn_cli.py nlp obligaciones 206396 --con-plazo     # Solo las que tienen plazo
+python bcn_cli.py nlp eliminar 206396                     # Borrar análisis NLP completo de una norma
+python bcn_cli.py nlp eliminar 206396 --solo entidades    # Borrar solo entidades
+python bcn_cli.py nlp eliminar 206396 --solo entidades --solo referencias  # Borrar tablas específicas
+python bcn_cli.py nlp eliminar 206396 --si                # Confirmar sin preguntar
 python bcn_cli.py nlp stats                               # Estadísticas globales del análisis NLP
 
 # Sistema
@@ -117,6 +134,12 @@ python bcn_cli.py --debug normas sync 17
 ```
 
 Sin el flag, solo se muestran warnings relevantes (como normas con ID inválido). Los logs de nivel INFO quedan silenciados.
+
+#### Modo LLM (experimental)
+
+Los comandos `nlp analizar` y `nlp analizar-institucion` aceptan el flag `--llm`, que reemplaza el NER estadístico (`es_core_news_lg`) por Ollama con el modelo `gemma4` para la extracción de entidades nombradas. Las referencias normativas y las obligaciones siguen usando reglas en ambos modos.
+
+Requiere Ollama instalado y corriendo con el modelo `gemma4` disponible. Las referencias normativas y obligaciones siguen usando reglas en ambos modos.
 
 ### Scheduler
 
@@ -200,8 +223,10 @@ BCNXMLParser → Markdown
       |
       v
 NLPAnalyzer (utils/nlp.py)
+  ├── Segmentación  — divide el Markdown en secciones por encabezado ##
+  │                   (un bloque por artículo/encabezado/anexo)
   ├── EntityRuler   — referencias normativas (NORMA_REF) via patrones de token
-  ├── NER           — personas, organismos, lugares (es_core_news_lg)
+  ├── NER           — personas, organismos, lugares (es_core_news_lg o Ollama/gemma4)
   └── Dependencias  — obligaciones y plazos via árbol sintáctico
       |
       v
@@ -212,6 +237,8 @@ NLPManager (managers/nlp.py)
 ```
 
 Las referencias a normas que no están en la DB local se guardan con `resolvida = false`. Al ejecutar `bcn nlp resolver` el sistema intenta vincularlas contra las normas disponibles. A medida que se sincronizan más instituciones, el grafo de relaciones se completa de forma diferida.
+
+La segmentación por secciones procesa cada artículo y bloque normativo de forma independiente, lo que reduce falsos positivos del NER al acotar la ventana de contexto. La sección "Información Básica" se excluye del análisis porque sus metadatos estructurados (fechas, organismos, materias) ya se extraen directamente del XML. Las entidades se deduplicán entre secciones por `(texto, tipo)`.
 
 ## Modelo de datos
 
@@ -243,7 +270,7 @@ Oraciones con verbos de obligación o permisión (`deberá`, `podrá`, `se proh�
 | 4 — API | FastAPI, OpenAPI, búsqueda avanzada | Completada |
 | 5 — Scheduler | Sync automático programable, proceso independiente cross-platform | Completada |
 | 5 — Metadata y versionado | Tabla EAV de metadata, historial de versiones, búsqueda por clave | Completada |
-| 5 — NLP | Referencias normativas, NER, obligaciones y plazos | En desarrollo |
+| 5 — Análisis | Referencias normativas, NER, obligaciones y plazos | Completada |
 
 ## Estructura del proyecto
 
@@ -266,7 +293,7 @@ BCNExtractor/
 │       ├── instituciones.py# list, get, load
 │       ├── sistema.py      # init, stats, cache
 │       ├── scheduler.py    # start, stop, status, add, remove, list
-│       └── nlp.py          # analizar, analizar-institucion, resolver, referencias, entidades, obligaciones, stats
+│       └── nlp.py          # analizar, analizar-institucion, resolver, referencias, entidades, obligaciones, eliminar, stats
 ├── api/                    # Lógica de la API
 │   ├── main.py             # App FastAPI + registro de routers
 │   ├── dependencies.py     # Instancias compartidas (client, parser, managers)
@@ -285,6 +312,9 @@ BCNExtractor/
 │   └── nlp.py              # NLPManager — referencias, entidades y obligaciones
 ├── loaders/
 │   └── institutions.py
+├── tui/
+│   └── tabs/
+│       └── nlp.py          # Tab NLP: referencias, citado por, entidades, obligaciones
 ├── utils/
 │   ├── norm_parser.py
 │   ├── norm_types.py       # Norm (Pydantic), NormResponse — incluye to_parsed_data()
