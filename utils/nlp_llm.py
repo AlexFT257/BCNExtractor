@@ -30,8 +30,17 @@ class NLPLLM:
         self.model = model
         self.format = format
         self.prompt = """
-        Extrae únicamente las entidades mencionadas en el siguiente párrafo, clasificándolas en las categorías: organismo, persona, lugar.
-        Devuelve solo las entidades identificadas y su categoría correspondiente.
+        Eres un procesador NLP y categorizador de entidades.
+        Tu única tarea es extraer Entidades Nombradas (NER) del texto proporcionado.
+        
+        Debes extraer entidades que pertenezcan EXCLUSIVAMENTE a estas tres categorías:
+        1. "organismo": Instituciones gubernamentales, empresas, ministerios, municipalidades, etc.
+        2. "persona": Nombres de individuos.
+        3. "lugar": Ciudades, regiones, países, direcciones geográficas.
+        
+        REGLAS:
+        - Ignora nombres de leyes, decretos o articulos(ej. Ley 19.300, D.F.L).
+        - Debes apegarte estrictamente al esquema JSON proporcionado.
         """
 
         if self.model not in [model["name"] for model in self.models]:
@@ -72,13 +81,17 @@ class NLPLLM:
                 "model": self.model,
                 "stream": False,
                 # "options": {
-                    # "temperature": 0.1,
+                # "temperature": 0.1,
                 # },
                 "prompt": self.prompt + "\n\n" + text,
                 "format": self.format,
+                "options": {
+                    # "temperature": 0.1,
+                    "num_ctx": 32768  # context window size
+                },
             },
         )
-        
+
         try:
             data = response.json()
             return json.loads(data["response"])
