@@ -353,11 +353,14 @@ class NormsManager:
     def get_by_range_date(
         self,
         start_date: date,
-        end_date: date = date.today(),
+        end_date: Optional[date]= None,
         date_type: Literal["pub", "prom"] = "pub",
         limit: int = 100,
         offset: int = 0,
     ) -> List[Dict]:
+        if end_date is None:
+            end_date = date.today()
+
         if not start_date:
             raise ValueError("start_date must be provided")
         if date_type not in ("pub", "prom"):

@@ -269,7 +269,7 @@ class BCNClient:
 
         # Descargar cada norma
         for i, norma_info in enumerate(normas, 1):
-            id_norma = int(norma_info["id_norma"])
+            id_norma = int(norma_info["id"])
 
             logger.info(
                 f"[{i}/{len(normas)}] Descargando norma {id_norma}: {norma_info['titulo'][:50]}..."

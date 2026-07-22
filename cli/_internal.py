@@ -16,11 +16,11 @@ def configure_logging(debug: bool = False):
 def create_connection():
     load_dotenv()
     return psycopg2.connect(
-        host="localhost",
+        host=os.getenv("POSTGRES_HOST", "localhost"),
         port=os.getenv("POSTGRES_PORT", 5432),
         database=os.getenv("POSTGRES_DB", "bcn_normas"),
         user=os.getenv("POSTGRES_USER", "bcn_user"),
-        password=os.getenv("POSTGRES_PASSWORD", "changeme"),
+        password=os.getenv("POSTGRES_PASSWORD", "bcn_password"),
     )
 
 
