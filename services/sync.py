@@ -213,13 +213,6 @@ def _procesar_norma(
             force=force,
         )
 
-        # Metadata EAV — solo cuando hay algo que escribir
-        if result in ("nueva", "actualizada"):
-            cursor = managers["conn"].cursor()
-            managers["metadata"].save(cursor, nid, parsed)
-            managers["conn"].commit()
-            cursor.close()
-
         managers["logger"].log(nid, "exitosa", "sincronizacion")
         log(f"[{'green' if result == 'nueva' else 'cyan' if result == 'actualizada' else 'dim'}]"
             f"✓ #{nid} {result}[/]")

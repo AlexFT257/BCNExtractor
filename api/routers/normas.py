@@ -62,12 +62,13 @@ def get_normas_by_type(
 @router.get("/rango")
 def get_normas_by_date_range(
     start_date: date,
-    end_date: date = date.today(),
+    end_date: Optional[date]= None,
     date_type: Literal["pub", "prom"] = Query(default="pub"),
     limit: int = Query(default=100, ge=1, le=500),
     offset: int = Query(default=0, ge=0),
     manager=Depends(get_norm_manager),
 ):
+    end_date = date.today()
     results = manager.get_by_range_date(
         start_date=start_date,
         end_date=end_date,
@@ -121,4 +122,3 @@ def get_normas_batch(
         markdown, norm_data = parser.parse_from_string(norma)
         normas.append({"norma": norm_data, "markdown": markdown})
     return normas
-    
